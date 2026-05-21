@@ -666,13 +666,6 @@ export default function AdminPanel({
                     {copied ? "Link Copiado!" : "Copiar Link da Sala"}
                   </button>
                 </div>
-                {window.location.origin.includes("-dev-") && (
-                  <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] text-emerald-500 font-sans text-left leading-normal space-y-1">
-                    <span className="font-bold flex items-center gap-1">✅ QR Code Público Habilitado</span>
-                    <p>O link do QR Code foi convertido automaticamente para o link público de visualização (<strong>-pre-</strong>).</p>
-                    <p className="text-slate-400">Seus participantes já podem escanear e entrar imediatamente sem nenhum erro de acesso!</p>
-                  </div>
-                )}
               </div>
 
               {/* Opção para não repetir ganhadores no sorteio QRCode */}
@@ -1171,14 +1164,6 @@ export default function AdminPanel({
               <p className="text-xs text-slate-400 max-w-sm mt-4 leading-relaxed font-sans">
                 Aponte a câmera do celular para o código acima para participar instantaneamente!
               </p>
-
-              {window.location.origin.includes("-dev-") && (
-                <div className="max-w-md mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-500 font-sans text-left leading-normal space-y-1 col-span-full">
-                  <span className="font-bold flex items-center gap-1">✅ QR Code Configurado no Link Público</span>
-                  <p>Convertemos de forma automática o link do QR Code para o formato público (<strong>-pre-</strong>). Participantes externos podem escanear normalmente!</p>
-                  <p className="text-slate-400">Gerencie o painel tranquilamente enquanto seus participantes participam utilizando o código público.</p>
-                </div>
-              )}
 
               <button
                 onClick={() => setIsQrExpanded(false)}

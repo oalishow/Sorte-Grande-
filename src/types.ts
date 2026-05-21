@@ -43,8 +43,6 @@ export interface Room {
   isOpenRoom?: boolean;
   drawHistory?: DrawHistoryEntry[];
   messages?: ChatMessage[];
-  mutedUserIds?: string[];
-  typingUsers?: Record<string, { name: string; timestamp: number }>;
 }
 
 export interface ChatMessage {
