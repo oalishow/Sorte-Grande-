@@ -622,6 +622,22 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
         confirmText="Sim, Apagar para Sempre"
         cancelText="Voltar"
       />
+      {/* Master Copyright Footer (consistent with branding) */}
+      <footer className="w-full text-center mt-12 py-8 border-t border-white/5 opacity-80 shrink-0">
+        <p className="text-[10px] text-slate-500 font-medium font-sans">
+          Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
+          <span>Versão: 0.15 (Beta)</span>
+          <span>•</span>
+          <span>Build: 2026-05-21</span>
+          <span>•</span>
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-[pulse_2s_infinite]" />
+            <span className="text-blue-500 font-bold uppercase">Integridade Máster</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

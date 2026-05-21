@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Prize, Participant } from "../types";
 import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio, Printer, Trophy, Share2 } from "lucide-react";
@@ -35,6 +35,11 @@ export default function AdminPanel({
   // New features state
   const [isQrExpanded, setIsQrExpanded] = useState(false);
   const [isEventFinished, setIsEventFinished] = useState(false);
+
+  // Memoize reversed participants for performance
+  const reversedParticipants = useMemo(() => {
+    return [...room.participants].reverse();
+  }, [room.participants]);
 
   // Print results reporting tool
   const handlePrintResults = () => {
@@ -667,10 +672,7 @@ export default function AdminPanel({
               ) : (
                 <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
                   <AnimatePresence mode="popLayout">
-                    {room.participants
-                      .slice()
-                      .reverse()
-                      .map((p, idx) => (
+                    {reversedParticipants.map((p, idx) => (
                         <motion.div
                           key={p.id}
                           initial={{ opacity: 0, x: -10, scale: 0.95 }}
@@ -798,42 +800,42 @@ export default function AdminPanel({
                         </div>
 
                         {/* Draw button or Winner banner detail */}
-                        {p.winner ? (
-                          <div className="flex flex-col gap-2 pt-2 border-t border-white/5 font-sans">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[11px] text-emerald-400 font-bold tracking-wider uppercase">
-                                🎉 SORTEADO!
-                              </span>
-                              <span className="text-xs text-slate-300 font-medium truncate max-w-[150px]">
-                                {p.winner.name} (#{p.winner.ticketNumber})
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => {
-                                onDrawPrize(p.id);
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }}
-                              disabled={room.status === "drawing" && room.activePrizeId === p.id}
-                              className="w-full py-1 text-[10px] bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-450 font-bold tracking-wider rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase border outline-none disabled:opacity-40 disabled:cursor-not-allowed"
-                              title="Caso a pessoa não esteja presente, clique aqui para sortear novamente"
-                            >
-                              <RefreshCw className="w-3 h-3 text-rose-450 animate-spin" style={{ animationDuration: "15s" }} />
-                              Sortear Novamente (Ausente) ♻️
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              onDrawPrize(p.id);
-                              window.scrollTo({ top: 0, behavior: "smooth" });
-                            }}
-                            disabled={cannotDraw || noParticipants}
-                            className="w-full py-1.5 bg-[#2563EB] text-white text-xs font-bold tracking-wider rounded-lg shadow-md transition-all hover:bg-[#1D4ED8] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 uppercase outline-none"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            Sortear Prêmio 🎲
-                          </button>
-                        )}
+                            {p.winner && !(room.status === "drawing" && room.activePrizeId === p.id) ? (
+                              <div className="flex flex-col gap-2 pt-2 border-t border-white/5 font-sans">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] text-emerald-400 font-bold tracking-wider uppercase">
+                                    🎉 SORTEADO!
+                                  </span>
+                                  <span className="text-xs text-slate-300 font-medium truncate max-w-[150px]">
+                                    {p.winner.name} (#{p.winner.ticketNumber})
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    onDrawPrize(p.id);
+                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                  }}
+                                  disabled={room.status === "drawing" && room.activePrizeId === p.id}
+                                  className="w-full py-1 text-[10px] bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-450 font-bold tracking-wider rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase border outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                  title="Caso a pessoa não esteja presente, clique aqui para sortear novamente"
+                                >
+                                  <RefreshCw className="w-3 h-3 text-rose-450 animate-spin" style={{ animationDuration: "15s" }} />
+                                  Sortear Novamente (Ausente) ♻️
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  onDrawPrize(p.id);
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }}
+                                disabled={cannotDraw || noParticipants}
+                                className="w-full py-1.5 bg-[#2563EB] text-white text-xs font-bold tracking-wider rounded-lg shadow-md transition-all hover:bg-[#1D4ED8] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 uppercase outline-none"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                {room.status === "drawing" && room.activePrizeId === p.id ? "Sorteando..." : "Sortear Prêmio 🎲"}
+                              </button>
+                            )}
                       </motion.div>
                     );
                   })}
@@ -908,7 +910,7 @@ export default function AdminPanel({
           Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
         </p>
         <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-650 font-mono">
-          <span>Versão: 0.14 (Beta)</span>
+          <span>Versão: 0.15 (Beta)</span>
           <span>•</span>
           <span>Build: 2026-05-21</span>
           <span>•</span>

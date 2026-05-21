@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, doc, getDoc, setDoc, updateDoc, 
   deleteDoc, collection, getDocs, onSnapshot, 
-  writeBatch
+  writeBatch, query, where, orderBy, limit
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { Room, Participant, Prize, DrawHistoryEntry } from '../types';
@@ -393,33 +393,55 @@ export async function firebaseReopenRoom(roomId: string): Promise<void> {
 
 export async function firebaseGetRoomsList(): Promise<Room[]> {
   try {
-    const allSnap = await getDocs(collection(db, 'rooms'));
+    const q = query(
+      collection(db, 'rooms'),
+      where('deletedAt', '==', null),
+      orderBy('createdAt', 'desc'),
+      limit(100)
+    );
+    const snap = await getDocs(q);
     const rooms: Room[] = [];
-    allSnap.forEach(d => {
-      const room = d.data() as Room;
-      if (!room.deletedAt) {
-        rooms.push(room);
-      }
+    snap.forEach(d => {
+      rooms.push(d.data() as Room);
     });
     return rooms;
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, 'rooms');
+    // If index is missing, fallback to old method
+    try {
+      const allSnap = await getDocs(collection(db, 'rooms'));
+      const rooms: Room[] = [];
+      allSnap.forEach(d => {
+        const room = d.data() as Room;
+        if (!room.deletedAt) rooms.push(room);
+      });
+      return rooms.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } catch (e) {
+      handleFirestoreError(err, OperationType.GET, 'rooms');
+    }
   }
 }
 
 export async function firebaseGetTrashedRooms(): Promise<Room[]> {
   try {
+    const q = query(
+      collection(db, 'rooms'),
+      where('deletedAt', '>', 0),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    const rooms: Room[] = [];
+    snap.forEach(d => {
+      rooms.push(d.data() as Room);
+    });
+    return rooms;
+  } catch (err) {
     const allSnap = await getDocs(collection(db, 'rooms'));
     const rooms: Room[] = [];
     allSnap.forEach(d => {
       const room = d.data() as Room;
-      if (room.deletedAt) {
-        rooms.push(room);
-      }
+      if (room.deletedAt) rooms.push(room);
     });
     return rooms;
-  } catch (err) {
-    handleFirestoreError(err, OperationType.GET, 'rooms');
   }
 }
 
@@ -489,6 +511,36 @@ export async function firebaseGetOpenRooms(): Promise<Room[]> {
       }
     });
     return openRooms;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.GET, 'rooms');
+  }
+}
+
+export function firebaseSubscribeOpenRooms(callback: (rooms: Room[]) => void) {
+  try {
+    const q = query(
+      collection(db, 'rooms'),
+      where('isOpenRoom', '==', true),
+      where('deletedAt', '==', null)
+    );
+    return onSnapshot(q, (snap) => {
+      const openRooms: Room[] = [];
+      snap.forEach(d => {
+        openRooms.push(d.data() as Room);
+      });
+      callback(openRooms);
+    }, (err) => {
+      // Fallback if index not ready
+      const qAll = collection(db, 'rooms');
+      return onSnapshot(qAll, (snap2) => {
+        const openRooms: Room[] = [];
+        snap2.forEach(d => {
+          const r = d.data() as Room;
+          if (r.isOpenRoom && !r.deletedAt) openRooms.push(r);
+        });
+        callback(openRooms);
+      });
+    });
   } catch (err) {
     handleFirestoreError(err, OperationType.GET, 'rooms');
   }

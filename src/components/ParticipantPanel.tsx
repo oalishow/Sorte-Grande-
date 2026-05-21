@@ -281,13 +281,13 @@ export default function ParticipantPanel({
                             <span className="font-medium text-slate-200 truncate pr-2">
                               {p.name}
                             </span>
-                            {p.winner ? (
+                            {p.winner && !(room.status === "drawing" && room.activePrizeId === p.id) ? (
                               <span className="text-[9px] font-bold text-emerald-400 uppercase py-0.5 px-2 bg-emerald-500/10 rounded">
                                 Ganhador: {p.winner.name}
                               </span>
                             ) : (
                               <span className="text-[9px] font-bold text-blue-400 uppercase py-0.5 px-2 bg-blue-500/10 rounded">
-                                Livre
+                                {room.status === "drawing" && room.activePrizeId === p.id ? "Sorteando..." : "Livre"}
                               </span>
                             )}
                           </div>
@@ -360,7 +360,7 @@ export default function ParticipantPanel({
           Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
         </p>
         <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
-          <span>Versão: 0.14 (Beta)</span>
+          <span>Versão: 0.15 (Beta)</span>
           <span>•</span>
           <span>Build: 2026-05-21</span>
           <span>•</span>

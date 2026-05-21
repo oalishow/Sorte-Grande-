@@ -4,7 +4,7 @@ import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award,
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
 import { apiFetch } from "../lib/api";
-import { firebaseGetOpenRooms } from "../lib/firebase";
+import { firebaseSubscribeOpenRooms } from "../lib/firebase";
 
 interface HomeProps {
   onCreateRoom: (roomName: string, isOpenRoom?: boolean) => void;
@@ -21,35 +21,28 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
   const [errorMsg, setErrorMsg] = useState("");
   const [openRooms, setOpenRooms] = useState<Array<{ id: string; name: string; status: string; participantsCount: number; prizesCount: number }>>([]);
 
-  // Fetch open rooms dynamically
+  // Sync open rooms in real-time
   useEffect(() => {
-    const fetchOpenRooms = async () => {
-      try {
-        const rooms = await firebaseGetOpenRooms();
-        
-        // Filter out rooms where all prizes have been drawn
-        const activeRooms = rooms.filter(r => {
-          if (r.prizes.length === 0) return true;
-          const allPrizesDrawn = r.prizes.every(p => p.winner !== null);
-          // Only hide if all prizes are drawn AND the room isn't currently in a drawing animation
-          return !allPrizesDrawn || r.status === "drawing";
-        });
+    const unsubscribe = firebaseSubscribeOpenRooms((rooms) => {
+      // Filter out rooms where all prizes have been drawn
+      const activeRooms = rooms.filter(r => {
+        if (r.prizes.length === 0) return true;
+        const allPrizesDrawn = r.prizes.every(p => p.winner !== null);
+        // Only hide if all prizes are drawn AND the room isn't currently in a drawing animation
+        return !allPrizesDrawn || r.status === "drawing";
+      });
 
-        const formatted = activeRooms.map(r => ({
-          id: r.id,
-          name: r.name,
-          status: r.status,
-          participantsCount: r.participants.length,
-          prizesCount: r.prizes.length
-        }));
-        setOpenRooms(formatted);
-      } catch (err) {
-        // ignore fetch errors silently
-      }
-    };
-    fetchOpenRooms();
-    const interval = setInterval(fetchOpenRooms, 3000);
-    return () => clearInterval(interval);
+      const formatted = activeRooms.map(r => ({
+        id: r.id,
+        name: r.name,
+        status: r.status,
+        participantsCount: r.participants.length,
+        prizesCount: r.prizes.length
+      }));
+      setOpenRooms(formatted);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Custom Modal States
