@@ -69,7 +69,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const res = await fetch("/api/admin/rooms", {
+      const res = await apiFetch("/api/admin/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pass }),
@@ -107,7 +107,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const res = await fetch("/api/admin/rooms/create-test", {
+      const res = await apiFetch("/api/admin/rooms/create-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -143,7 +143,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   const executeDeleteRoom = async (roomId: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/rooms/delete", {
+      const res = await apiFetch("/api/admin/rooms/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: "7777", roomId }),
@@ -167,7 +167,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   const handleRestoreRoom = async (roomId: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/rooms/restore", {
+      const res = await apiFetch("/api/admin/rooms/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: "7777", roomId }),
@@ -194,7 +194,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   const executeDeleteRoomPermanently = async (roomId: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/rooms/delete-permanently", {
+      const res = await apiFetch("/api/admin/rooms/delete-permanently", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: "7777", roomId }),
@@ -219,7 +219,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     if (!confirmChoice) return;
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/rooms/empty-trash", {
+      const res = await apiFetch("/api/admin/rooms/empty-trash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: "7777" }),

@@ -191,7 +191,7 @@ export default function AdminPanel({
     setManualError("");
     try {
       const manualPlayerId = `manual_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const joinres = await fetch(`/api/rooms/${room.id}/join`, {
+      const joinres = await apiFetch(`/api/rooms/${room.id}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 

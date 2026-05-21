@@ -146,7 +146,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/rooms", {
+      const res = await apiFetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomName, creatorId: playerId, isOpenRoom }),
@@ -176,11 +176,11 @@ export default function App() {
   const handleJoinParticipant = async (name: string) => {
     setError(null);
     try {
-      const res = await fetch(`/api/join`, {
+      const res = await apiFetch(`/api/join`, {
         method: "POST", // mapped through root or api rules
       });
       // Try posting directly to room join
-      const joinres = await fetch(`/api/rooms/${roomId}/join`, {
+      const joinres = await apiFetch(`/api/rooms/${roomId}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, playerId }),
@@ -192,7 +192,7 @@ export default function App() {
       }
       
       // Immediate pull update
-      const updatedRes = await fetch(`/api/rooms/${roomId}`);
+      const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
       if (updatedRes.ok) {
         const updatedData = await updatedRes.json();
         setRoomState(updatedData);
@@ -205,14 +205,14 @@ export default function App() {
   const handleAddPrize = async (name: string) => {
     try {
       const masterPassword = sessionStorage.getItem("master_password") || "";
-      const res = await fetch(`/api/rooms/${roomId}/prizes`, {
+      const res = await apiFetch(`/api/rooms/${roomId}/prizes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, playerId, masterPassword }),
       });
       
       if (res.ok) {
-        const updatedRes = await fetch(`/api/rooms/${roomId}`);
+        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
         if (updatedRes.ok) {
           setRoomState(await updatedRes.json());
         }
@@ -229,12 +229,12 @@ export default function App() {
         playerId,
         masterPassword,
       });
-      const res = await fetch(`/api/rooms/${roomId}/prizes/${prizeId}?${params.toString()}`, {
+      const res = await apiFetch(`/api/rooms/${roomId}/prizes/${prizeId}?${params.toString()}`, {
         method: "DELETE",
       });
       
       if (res.ok) {
-        const updatedRes = await fetch(`/api/rooms/${roomId}`);
+        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
         if (updatedRes.ok) {
           setRoomState(await updatedRes.json());
         }
@@ -246,14 +246,14 @@ export default function App() {
 
   const handleDrawPrize = async (prizeId: string) => {
     try {
-      const res = await fetch(`/api/rooms/${roomId}/draw`, {
+      const res = await apiFetch(`/api/rooms/${roomId}/draw`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prizeId }),
       });
       
       if (res.ok) {
-        const updatedRes = await fetch(`/api/rooms/${roomId}`);
+        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
         if (updatedRes.ok) {
           setRoomState(await updatedRes.json());
         }
@@ -265,12 +265,12 @@ export default function App() {
 
   const handleResetDrawState = async () => {
     try {
-      const res = await fetch(`/api/rooms/${roomId}/reset`, {
+      const res = await apiFetch(`/api/rooms/${roomId}/reset`, {
         method: "POST",
       });
       
       if (res.ok) {
-        const updatedRes = await fetch(`/api/rooms/${roomId}`);
+        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
         if (updatedRes.ok) {
           setRoomState(await updatedRes.json());
         }
