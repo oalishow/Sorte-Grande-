@@ -84,7 +84,10 @@ export default function App() {
         // Define users credentials (creator vs regular player)
         const isCreator = localStorage.getItem(`raffle_room_${parsedRoomId}_creator`) === "true";
         const urlParams = new URLSearchParams(window.location.search);
-        const isAdminQuery = urlParams.get("role") === "admin";
+        
+        // Admin role is only allowed if they are the creator OR if they have the master password
+        const hasMasterPower = sessionStorage.getItem("master_password") === "7777";
+        const isAdminQuery = urlParams.get("role") === "admin" && hasMasterPower;
         
         setRole(isCreator || isAdminQuery ? "admin" : "participant");
         setError(null);
