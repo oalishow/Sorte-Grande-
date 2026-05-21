@@ -130,6 +130,41 @@ export async function firebaseJoinRoom(roomId: string, name: string, playerId: s
   }
 }
 
+export async function firebaseImportParticipants(roomId: string, names: string[]): Promise<Participant[]> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      throw new Error("Sala de sorteio não encontrada.");
+    }
+    const room = snap.data() as Room;
+
+    let startTicket = 101 + room.participants.length;
+    const newParticipants: Participant[] = [];
+
+    names.forEach((name, idx) => {
+      if (!name.trim()) return;
+      const manualPlayerId = `manual_import_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`;
+      newParticipants.push({
+        id: manualPlayerId,
+        name: name.trim(),
+        ticketNumber: startTicket++,
+        joinedAt: Date.now() + idx,
+      });
+    });
+
+    if (newParticipants.length === 0) return [];
+
+    const updatedParticipants = [...room.participants, ...newParticipants];
+    await updateDoc(docRef, { participants: updatedParticipants });
+    return newParticipants;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `rooms/${upperCode}`);
+    throw err;
+  }
+}
+
 export async function firebaseAddPrize(roomId: string, name: string): Promise<Room> {
   const upperCode = roomId.trim().toUpperCase();
   try {

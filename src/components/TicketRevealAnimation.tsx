@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Ticket, Sparkles } from "lucide-react";
 import VouGanheiLogo from "./VouGanheiLogo";
+import { audioService } from "../utils/audio";
 
 interface TicketRevealAnimationProps {
   ticketNumber: number;
@@ -21,17 +22,24 @@ export default function TicketRevealAnimation({
     let startTime = Date.now();
     const duration = 3000; // 3 seconds as requested
     
+    // Play an entry tick immediately to declare/unlock audio context
+    audioService.playCountdownTick();
+
     const tick = () => {
       const elapsed = Date.now() - startTime;
       if (elapsed < duration) {
         // Fast spin through random numbers
         const rand = Math.floor(Math.random() * 999).toString().padStart(3, '0');
         setCurrentNum(rand);
+        // Play light mechanical tick for each step of the number spin
+        audioService.playSpinTick();
         setTimeout(tick, 60);
       } else {
         // Stop on the actual ticket number
         setIsSpinning(false);
         setCurrentNum(ticketNumber.toString().padStart(3, '0'));
+        // Play beautiful success fanfare when the ticket is unlocked!
+        audioService.playVictoryFanfare();
         // The reveal lasts for some more time before onComplete
         setTimeout(onComplete, 4000);
       }

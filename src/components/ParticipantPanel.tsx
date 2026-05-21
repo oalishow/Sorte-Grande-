@@ -5,6 +5,7 @@ import { Gift, Ticket, User, Users, Sparkles, LogOut, ArrowLeft, Heart, CheckCir
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import TicketRevealAnimation from "./TicketRevealAnimation";
+import { audioService } from "../utils/audio";
 
 interface ParticipantPanelProps {
   room: Room;
@@ -66,6 +67,8 @@ export default function ParticipantPanel({
     }
     setIsSubmitting(true);
     try {
+      // Play startup cue to unlock browser AudioContext on user interaction
+      audioService.playCountdownStart();
       await onJoin(nameInput.trim());
     } catch (err: any) {
       setErrorMsg(err.message || "Erro ao entrar no sorteio.");
