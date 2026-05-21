@@ -78,7 +78,10 @@ export default function App() {
   // Dev Server URL - AI Studio proxies port 3000 to this domain
   // We guarantee it points to a publicly accessible host (like Cloud Run) when accessed inside sandboxes or on localhost, so that QR Code scans from phones never get blocked.
   const getAppUrl = () => {
-    const origin = window.location.origin;
+    let origin = window.location.origin;
+    if (origin.includes("-dev-")) {
+      return origin.replace("-dev-", "-pre-");
+    }
     if (origin.includes("localhost") || origin.includes("127.0.0.1") || !origin.includes("run.app")) {
       return "https://ais-pre-4jhjpezsbvi4kylf2bocxs-51066803168.us-east1.run.app";
     }
