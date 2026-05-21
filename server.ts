@@ -730,6 +730,10 @@ async function startServer() {
     // Dynamic fallback for all remaining routes in development, ensuring client-side SPA routing (like /room/ROOMCODE) works seamlessly
     app.get("*", async (req, res, next) => {
       const url = req.originalUrl;
+      // Do not serve index.html for static file requests (e.g. sw.js, .png, .json)
+      if (url.match(/\.[a-zA-Z0-9]+$/) && !url.includes('?')) {
+         return res.status(404).send('Not Found');
+      }
       try {
         let template = fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf-8");
         template = await vite.transformIndexHtml(url, template);
@@ -743,6 +747,10 @@ async function startServer() {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
+      // Do not serve index.html for static file requests (e.g. sw.js, .png, .json)
+      if (req.originalUrl.match(/\.[a-zA-Z0-9]+$/) && !req.originalUrl.includes('?')) {
+         return res.status(404).send('Not Found');
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

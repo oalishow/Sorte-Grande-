@@ -1,38 +1,25 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Service Worker Registration for PWA & Automatic Updates
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('SW registered:', registration);
-        
-        // Check for updates on every page load
-        registration.update();
+// Using Vite PWA plugin virtual module for automatic update handling
+import { registerSW } from 'virtual:pwa-register';
 
-        // Detect if there's a new SW waiting to activate
-        registration.onupdatefound = () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.onstatechange = () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New content is available; ask to reload or force it
-                console.log('New update available, reloading...');
-                window.location.reload();
-              }
-            };
-          }
-        };
-      })
-      .catch((err) => console.log('SW registration failed:', err));
-  });
-}
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Automatically reload when an update is available (can be customized if desired)
+    console.log('New update available, reloading...');
+    updateSW();
+  },
+  onOfflineReady() {
+    console.log('App is ready to work offline');
+  },
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
+
