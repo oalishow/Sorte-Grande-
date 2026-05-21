@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus, Monitor } from "lucide-react";
+import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus, Monitor, Heart } from "lucide-react";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
 import { apiFetch } from "../lib/api";
@@ -612,6 +612,32 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           >
             <Settings className="w-5 h-5 animate-[spin_10s_linear_infinite] group-hover:text-blue-400" />
           </button>
+        </motion.div>
+
+        {/* Donation Panel */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.52 }}
+          className="w-full mt-6 bg-[#161920]/80 backdrop-blur-md rounded-2xl p-5 border border-white/5 shadow-xl text-center"
+        >
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Heart className="w-5 h-5 text-rose-500 animate-pulse" />
+            <h3 className="font-display text-sm font-extrabold text-white">Contribua com o Projeto</h3>
+          </div>
+          <p className="text-xs text-slate-400 mb-4 leading-relaxed font-sans max-w-sm mx-auto">
+            Ajude o seminarista a produzir mais soluções tecnológicas para a Igreja, toda ajuda é bem vinda para cobrir os custos.
+          </p>
+          <div className="flex flex-col items-center justify-center bg-white/5 py-4 rounded-xl border border-white/5 group hover:border-emerald-500/20 transition-all">
+            <form action="https://www.paypal.com/donate" method="post" target="_top">
+              <input type="hidden" name="business" value="NSDVMFFLK95U6" />
+              <input type="hidden" name="no_recurring" value="0" />
+              <input type="hidden" name="item_name" value="Ajude o seminarista a produzir mais soluções tecnológicas para a Igreja, toda ajuda é bem vinda para cobrir os custos." />
+              <input type="hidden" name="currency_code" value="BRL" />
+              <input type="image" src="https://www.paypalobjects.com/pt_BR/BR/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Faça doações com o botão do PayPal" className="hover:scale-105 transition-transform" />
+              <img alt="" border="0" src="https://www.paypal.com/pt_BR/i/scr/pixel.gif" width="1" height="1" />
+            </form>
+          </div>
         </motion.div>
 
         {/* Footnote credits and signature */}

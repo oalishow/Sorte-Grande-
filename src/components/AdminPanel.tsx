@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Prize, Participant } from "../types";
-import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio, Printer, Trophy } from "lucide-react";
+import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio, Printer, Trophy, Share2 } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
@@ -286,10 +286,15 @@ export default function AdminPanel({
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={handleCopyLink}
-            className="px-4 py-2 bg-[#161920] border border-white/5 hover:bg-opacity-80 hover:border-white/10 text-[#E2E8F0] font-semibold rounded-xl text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer"
+            className="px-4 py-2 bg-blue-600/10 border border-blue-500/30 hover:bg-blue-600/20 text-blue-400 font-bold rounded-xl text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer group shadow-lg shadow-blue-500/5"
+            title="Copiar link de compartilhamento da sala"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-blue-450 font-bold" />}
-            {copied ? "Link Copiado!" : "Copiar Link"}
+            {copied ? (
+              <Check className="w-4 h-4 text-emerald-500" />
+            ) : (
+              <Share2 className="w-4 h-4 text-blue-450 group-hover:scale-110 transition-transform" />
+            )}
+            {copied ? "Link Copiado!" : "Link de Partilha"}
           </button>
 
           <button
@@ -506,12 +511,21 @@ export default function AdminPanel({
                   Aponte a câmera do celular para este código para entrar na sala, colocar seu nome e obter seu bilhete premiado!
                 </p>
 
-                <button
-                  onClick={() => setIsQrExpanded(true)}
-                  className="mt-3.5 px-4 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/25 text-blue-400 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 mx-auto"
-                >
-                  Ampliar QR Code 🔍
-                </button>
+                <div className="flex flex-col gap-2 w-full mt-3.5">
+                  <button
+                    onClick={() => setIsQrExpanded(true)}
+                    className="w-full py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-[11px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 mx-auto"
+                  >
+                    Ampliar QR Code 🔍
+                  </button>
+                  <button
+                    onClick={handleCopyLink}
+                    className="w-full py-2 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/25 text-blue-400 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 mx-auto shadow-sm"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
+                    {copied ? "Link Copiado!" : "Copiar Link da Sala"}
+                  </button>
+                </div>
               </div>
 
               {/* Opção para não repetir ganhadores no sorteio QRCode */}
