@@ -42,4 +42,14 @@ export interface Room {
   classicDrawnNumbers?: number[];
   isOpenRoom?: boolean;
   drawHistory?: DrawHistoryEntry[];
+  messages?: ChatMessage[];
+}
+
+export interface ChatMessage {
+  id: string;
+  senderName: string;
+  senderId: string;
+  text: string;
+  timestamp: number;
+  isAdmin?: boolean;
 }

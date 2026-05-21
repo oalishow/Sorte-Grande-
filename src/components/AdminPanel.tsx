@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Prize, Participant } from "../types";
-import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio, Printer, Trophy, Share2, FileText, Upload } from "lucide-react";
+import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio, Printer, Trophy, Share2, FileText, Upload, Download, MessageCircle } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
+import LiveChat from "./LiveChat";
 import { firebaseUpdateSettings, firebaseJoinRoom, firebaseImportParticipants } from "../lib/firebase";
 
 interface AdminPanelProps {
@@ -277,6 +278,68 @@ export default function AdminPanel({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExportCSV = () => {
+    try {
+      // Build CSV content
+      // UTF-8 BOM to ensure Excel opens Portuguese characters correctly (e.g. Accents, Ç)
+      let csvContent = "\uFEFF";
+      
+      // Part 1: Room Meta
+      csvContent += `Sorteio:;${room.name}\r\n`;
+      csvContent += `Código da Sala:;${room.id}\r\n`;
+      csvContent += `Exportado em:;${new Date().toLocaleString("pt-BR")}\r\n`;
+      csvContent += `Total de Participantes:;${room.participants?.length || 0}\r\n\r\n`;
+      
+      // Part 2: Prizes and Winners
+      csvContent += `LISTA DE PRÊMIOS E GANHADORES\r\n`;
+      csvContent += `ID Prêmio;Prêmio;Ganhador;Número Bilhete;Data/Hora Sorteio\r\n`;
+      room.prizes.forEach(p => {
+        const winnerName = p.winner ? p.winner.name : "Não sorteado";
+        const ticketNum = p.winner ? p.winner.ticketNumber : "-";
+        const drawnTime = p.drawnAt ? new Date(p.drawnAt).toLocaleString("pt-BR") : "-";
+        csvContent += `"${p.id}";"${p.name}";"${winnerName}";"${ticketNum}";"${drawnTime}"\r\n`;
+      });
+      
+      csvContent += `\r\nLISTA DE PARTICIPANTES CADASTRADOS\r\n`;
+      csvContent += `ID Participante;Nome;Número Bilhete;Data/Hora Entrada\r\n`;
+      room.participants.forEach(p => {
+        const joinedTime = p.joinedAt ? new Date(p.joinedAt).toLocaleString("pt-BR") : "-";
+        csvContent += `"${p.id}";"${p.name}";"${p.ticketNumber}";"${joinedTime}"\r\n`;
+      });
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `sorteio_${room.id}_relatorio.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Erro ao exportar CSV:", err);
+    }
+  };
+
+  const shareWinnerOnWhatsApp = (prizeName: string, winnerName: string, ticketNumber: number) => {
+    const text = `*VouGanhei!* 🎉\n` +
+                 `\n` +
+                 `*PARABÉNS AO NOVO GANHADOR!* 🏆\n` +
+                 `👉 *${winnerName}* acaba de ganhar:\n` +
+                 `🎁 *Prêmio:* ${prizeName}\n` +
+                 `🎟️ *Bilhete Premiado:* #${ticketNumber}\n` +
+                 `📍 *Sala do Sorteio:* ${room.name} (#${room.id})\n` +
+                 `\n` +
+                 `Assista aos próximos sorteios ao vivo pelo link no seu celular ou PC:\n` +
+                 `${appUrl}/room/${room.id}\n` +
+                 `\n` +
+                 `--\n` +
+                 `Gerado por VouGanhei! Sorteador Técnico de Alta Performance. ✨`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  };
+
   const handleAddPrizeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPrizeName.trim()) return;
@@ -372,6 +435,15 @@ export default function AdminPanel({
           >
             <Printer className="w-4 h-4 text-indigo-400 font-bold" />
             Imprimir 🖨️
+          </button>
+
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2 bg-[#161920] border border-white/5 hover:bg-opacity-80 hover:border-white/10 text-[#E2E8F0] font-semibold rounded-xl text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer"
+            title="Exportar planilha Excel (CSV) com participantes e ganhadores"
+          >
+            <Download className="w-4 h-4 text-emerald-450 font-bold" />
+            Exportar XLS 📊
           </button>
 
           <button
@@ -550,7 +622,7 @@ export default function AdminPanel({
             /* =========================================================
                STANDARD QR CODE COLUMN 1: QR Code Room Entrance Card
                ========================================================= */
-            <div className="bg-[#161920] rounded-2xl p-6 border border-white/5 lg:col-span-4 shadow-xl flex flex-col items-center text-center h-[520px] justify-between">
+            <div className="bg-[#161920] rounded-2xl p-6 border border-white/5 lg:col-span-4 shadow-xl flex flex-col items-center text-center min-h-[520px] h-auto justify-between gap-6">
               <div>
                 <span className="text-[10px] font-bold tracking-widest text-[#3b82f6] uppercase mb-4 py-1 px-3 bg-blue-500/10 border border-blue-500/20 rounded-full inline-flex items-center gap-1.5 animate-pulse font-mono">
                   <Megaphone className="w-3 h-3 text-blue-450" /> ESCANEIE PARA PARTICIPAR
@@ -613,7 +685,7 @@ export default function AdminPanel({
               </div>
 
               <div className="w-full mt-2 pt-4 border-t border-white/5 flex flex-col items-center shrink-0">
-                <span className="text-[10px] font-semibold text-slate-550 uppercase tracking-widest block mb-2">
+                <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-widest block mb-2">
                   CÓDIGO MANUAL DA SALA
                 </span>
                 <div className="font-mono text-xl md:text-2xl font-black text-white bg-[#0F1115] px-4 py-2 rounded-xl border border-white/10 tracking-wider">
@@ -884,18 +956,29 @@ export default function AdminPanel({
                                     {p.winner.name} (#{p.winner.ticketNumber})
                                   </span>
                                 </div>
-                                <button
-                                  onClick={() => {
-                                    onDrawPrize(p.id);
-                                    window.scrollTo({ top: 0, behavior: "smooth" });
-                                  }}
-                                  disabled={room.status === "drawing" && room.activePrizeId === p.id}
-                                  className="w-full py-1 text-[10px] bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-450 font-bold tracking-wider rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase border outline-none disabled:opacity-40 disabled:cursor-not-allowed"
-                                  title="Caso a pessoa não esteja presente, clique aqui para sortear novamente"
-                                >
-                                  <RefreshCw className="w-3 h-3 text-rose-450 animate-spin" style={{ animationDuration: "15s" }} />
-                                  Sortear Novamente (Ausente) ♻️
-                                </button>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    onClick={() => {
+                                      onDrawPrize(p.id);
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    disabled={room.status === "drawing" && room.activePrizeId === p.id}
+                                    className="py-1.5 text-[10px] bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-450 font-black tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 uppercase border outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title="Caso a pessoa não esteja presente, clique aqui para sortear novamente"
+                                  >
+                                    <RefreshCw className="w-3 h-3 text-rose-450 animate-spin" style={{ animationDuration: "15s" }} />
+                                    Refazer ♻️
+                                  </button>
+
+                                  <button
+                                    onClick={() => shareWinnerOnWhatsApp(p.name, p.winner!.name, p.winner!.ticketNumber)}
+                                    className="py-1.5 text-[10px] bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 font-black tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 uppercase border outline-none font-sans"
+                                    title="Notificar ganhador e compartilhar resultado no WhatsApp"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/20" />
+                                    Notificar 💬
+                                  </button>
+                                </div>
                               </div>
                             ) : (
                               <button
@@ -917,6 +1000,16 @@ export default function AdminPanel({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Live Chat Panel */}
+        <div className="mt-8">
+          <LiveChat
+            room={room}
+            playerId="admin"
+            playerName="Apresentador 🎙️"
+            isAdmin={true}
+          />
         </div>
 
         {/* Draw History Section */}
@@ -959,15 +1052,24 @@ export default function AdminPanel({
                       </h4>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 mt-1.5 pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between gap-2 mt-1.5 pt-2 border-t border-white/5 font-sans">
                       <div className="space-y-0.5 text-left">
-                        <span className="text-[9px] font-mono text-slate-550 block uppercase">Contemplado</span>
-                        <span className="text-xs font-extrabold text-[#38bdf8] truncate max-w-[140px] block">
+                        <span className="text-[9px] font-mono text-slate-500 block uppercase font-bold">Contemplado</span>
+                        <span className="text-xs font-extrabold text-[#38bdf8] truncate max-w-[120px] block">
                           {entry.winnerName}
                         </span>
                       </div>
-                      <div className="font-mono text-[11px] font-black text-rose-450 bg-rose-500/5 border border-rose-500/10 py-1 px-2 rounded-md">
-                        #{entry.ticketNumber}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => shareWinnerOnWhatsApp(entry.prizeName, entry.winnerName, entry.ticketNumber)}
+                          className="p-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 rounded-md transition-all cursor-pointer"
+                          title="Notificar ganhador / Compartilhar no WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 fill-emerald-450/10" />
+                        </button>
+                        <div className="font-mono text-[11px] font-black text-rose-450 bg-rose-500/5 border border-rose-500/10 py-1 px-2 rounded-md">
+                          #{entry.ticketNumber}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1164,6 +1266,14 @@ export default function AdminPanel({
                   >
                     <Printer className="w-4 h-4 text-white" />
                     Imprimir Resultados
+                  </button>
+
+                  <button
+                    onClick={handleExportCSV}
+                    className="px-5 py-2.5 bg-[#10b981] hover:bg-[#059669] text-white font-extrabold rounded-xl text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-lg outline-none cursor-pointer font-sans"
+                  >
+                    <Download className="w-4 h-4 text-white" />
+                    Exportar Planilha 📊
                   </button>
 
                   <button

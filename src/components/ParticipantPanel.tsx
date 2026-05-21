@@ -6,6 +6,7 @@ import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import TicketRevealAnimation from "./TicketRevealAnimation";
 import { audioService } from "../utils/audio";
+import LiveChat from "./LiveChat";
 
 interface ParticipantPanelProps {
   room: Room;
@@ -375,6 +376,14 @@ export default function ParticipantPanel({
                       </div>
                     )}
                   </div>
+
+                  {/* Live Chat */}
+                  <LiveChat
+                    room={room}
+                    playerId={playerId}
+                    playerName={me ? me.name : "Espectador"}
+                    isAdmin={false}
+                  />
                 </div>
               )}
             </motion.div>

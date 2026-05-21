@@ -596,3 +596,35 @@ export function firebaseSubscribeRoom(roomId: string, callback: (room: Room | nu
     handleFirestoreError(err, OperationType.GET, `rooms/${upperCode}`);
   });
 }
+
+export async function firebaseSendChatMessage(
+  roomId: string,
+  senderId: string,
+  senderName: string,
+  text: string,
+  isAdmin = false
+): Promise<void> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error("Sala não encontrada.");
+    const room = snap.data() as Room;
+
+    const messages = room.messages || [];
+    const newMessage = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      senderId,
+      senderName,
+      text: text.trim().substring(0, 250), // Cap length
+      timestamp: Date.now(),
+      isAdmin,
+    };
+
+    // Keep only last 65 messages
+    const updatedMessages = [...messages, newMessage].slice(-65);
+    await updateDoc(docRef, { messages: updatedMessages });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `rooms/${upperCode}/messages`);
+  }
+}
