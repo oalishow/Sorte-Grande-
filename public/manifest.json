@@ -1,0 +1,26 @@
+{
+  "name": "VouGanhei! - Sorteios em Tempo Real",
+  "short_name": "VouGanhei!",
+  "description": "Aplicativo de Sorteios e Rifas Interativo em Tempo Real",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F1115",
+  "theme-color": "#0F1115",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["utilities", "entertainment"]
+}

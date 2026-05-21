@@ -171,7 +171,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
 
             <div className="text-left">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                Senha de Acesso Máster (Dica: 7777)
+                Senha de Acesso Máster
               </label>
               <input 
                 type="password"

@@ -56,6 +56,11 @@ app.post("/api/rooms", (req, res) => {
     currentWinningNumber: null,
     drawingStartedAt: null,
     createdAt: Date.now(),
+    drawMode: "qrcode",
+    classicMin: 1,
+    classicMax: 100,
+    classicNoRepeat: true,
+    classicDrawnNumbers: [],
   };
 
   rooms[roomId] = newRoom;
@@ -72,6 +77,46 @@ app.get("/api/rooms/:roomId", (req, res) => {
   }
   res.json(room);
 });
+
+// API: Update room configuration/settings or reset classic draws
+app.post("/api/rooms/:roomId/settings", (req, res) => {
+  const { roomId } = req.params;
+  const { drawMode, classicMin, classicMax, classicNoRepeat, clearHistory } = req.body;
+
+  const room = rooms[roomId.toUpperCase()];
+  if (!room) {
+    res.status(404).json({ error: "Sala de sorteio não encontrada." });
+    return;
+  }
+
+  if (drawMode !== undefined) {
+    room.drawMode = drawMode;
+  }
+  if (classicMin !== undefined) {
+    room.classicMin = Number(classicMin) !== undefined ? Number(classicMin) : 1;
+  }
+  if (classicMax !== undefined) {
+    room.classicMax = Number(classicMax) !== undefined ? Number(classicMax) : 100;
+  }
+  if (classicNoRepeat !== undefined) {
+    room.classicNoRepeat = !!classicNoRepeat;
+  }
+  if (clearHistory) {
+    room.classicDrawnNumbers = [];
+    room.prizes.forEach(p => {
+      p.winner = null;
+      p.drawnAt = null;
+    });
+    room.status = "waiting";
+    room.activePrizeId = null;
+    room.currentWinner = null;
+    room.currentWinningNumber = null;
+    room.drawingStartedAt = null;
+  }
+
+  res.json(room);
+});
+
 
 // API: Join a room
 app.post("/api/rooms/:roomId/join", (req, res) => {
@@ -177,6 +222,89 @@ app.post("/api/rooms/:roomId/draw", (req, res) => {
     return;
   }
 
+  const isClassicMode = room.drawMode === "classic";
+
+  if (isClassicMode) {
+    const min = room.classicMin !== undefined ? room.classicMin : 1;
+    const max = room.classicMax !== undefined ? room.classicMax : 100;
+
+    if (max < min) {
+      res.status(400).json({ error: "O número máximo não pode ser menor do que o mínimo." });
+      return;
+    }
+
+    let winnerNum: number;
+    const noRepeat = room.classicNoRepeat !== false;
+
+    if (noRepeat) {
+      const reservedNumbers = new Set<number>();
+      if (room.classicDrawnNumbers) {
+        room.classicDrawnNumbers.forEach(n => reservedNumbers.add(n));
+      }
+      room.prizes.forEach(p => {
+        if (p.id !== prizeId && p.winner) {
+          reservedNumbers.add(p.winner.ticketNumber);
+        }
+      });
+
+      const available: number[] = [];
+      for (let i = min; i <= max; i++) {
+        if (!reservedNumbers.has(i)) {
+          available.push(i);
+        }
+      }
+
+      if (available.length === 0) {
+        res.status(400).json({ error: "Todos os números deste intervalo já foram sorteados!" });
+        return;
+      }
+
+      winnerNum = available[Math.floor(Math.random() * available.length)];
+    } else {
+      winnerNum = Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    const winner: Participant = {
+      id: `classic_${winnerNum}`,
+      name: `Número ${winnerNum}`,
+      ticketNumber: winnerNum,
+      joinedAt: Date.now()
+    };
+
+    if (!room.classicDrawnNumbers) {
+      room.classicDrawnNumbers = [];
+    }
+    if (!room.classicDrawnNumbers.includes(winnerNum)) {
+      room.classicDrawnNumbers.push(winnerNum);
+    }
+
+    if (prizeId === "quick_draw") {
+      room.status = "drawing";
+      room.activePrizeId = "quick_draw";
+      room.currentWinner = winner;
+      room.currentWinningNumber = winnerNum;
+      room.drawingStartedAt = Date.now();
+    } else {
+      const prizeIndex = room.prizes.findIndex((p) => p.id === prizeId);
+      if (prizeIndex === -1) {
+        res.status(400).json({ error: "Prêmio não encontrado." });
+        return;
+      }
+      room.prizes[prizeIndex].winner = winner;
+      room.prizes[prizeIndex].drawnAt = Date.now();
+
+      room.status = "drawing";
+      room.activePrizeId = prizeId;
+      room.currentWinner = winner;
+      room.currentWinningNumber = winnerNum;
+      room.drawingStartedAt = Date.now();
+    }
+
+    res.json(room);
+    return;
+  }
+
+  // QR Code / Online Lobby Mode
   if (room.participants.length === 0) {
     res.status(400).json({ error: "Ainda não existem participantes nesta sala para o sorteio." });
     return;
@@ -294,6 +422,11 @@ app.post("/api/admin/rooms/create-test", (req, res) => {
     currentWinningNumber: null,
     drawingStartedAt: null,
     createdAt: Date.now(),
+    drawMode: "qrcode",
+    classicMin: 1,
+    classicMax: 100,
+    classicNoRepeat: true,
+    classicDrawnNumbers: [],
   };
 
   rooms[roomId] = newRoom;

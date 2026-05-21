@@ -1,5 +1,5 @@
 {
-  "name": "Sorte grande",
+  "name": "VouGanhei!",
   "description": "Sorteador de prêmios em tempo real por sala virtual com QR Code.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

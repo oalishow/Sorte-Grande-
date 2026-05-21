@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Room, Participant, Prize } from "../types";
 import { Gift, Ticket, User, Sparkles, LogOut, ArrowLeft, Heart, CheckCircle, Radio } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
+import VouGanheiLogo from "./VouGanheiLogo";
 
 interface ParticipantPanelProps {
   room: Room;
@@ -21,7 +22,16 @@ export default function ParticipantPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Determine if this visitor is registered
+  // Determine if this room is in Classic Sorteio mode
+  const isClassicSpectator = room.drawMode === "classic";
+
+  const displayedDrawnNumbers = (room.classicDrawnNumbers || []).filter((num) => {
+    if (room.status === "drawing" && room.currentWinningNumber !== null && num === room.currentWinningNumber) {
+      return false;
+    }
+    return true;
+  });
+
   const me = room.participants.find((p) => p.id === playerId);
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -41,11 +51,14 @@ export default function ParticipantPanel({
     }
   };
 
-  const activePrize = room.prizes.find((p) => p.id === room.activePrizeId);
+  const activePrize = room.activePrizeId === "quick_draw"
+    ? { id: "quick_draw", name: "Sorteio Rápido de Números 🎲", winner: room.currentWinner, drawnAt: Date.now() }
+    : room.prizes.find((p) => p.id === room.activePrizeId);
   const isMeWinner = room.currentWinner && room.currentWinner.id === playerId;
   const isLastPrize = room.prizes.length > 0 && room.prizes.every((p) => p.winner !== null);
   const drawDuration = isLastPrize ? 11000 : 7050;
   const delayForWinnerCard = (drawDuration / 1000) + 0.2;
+
 
   return (
     <div className="min-h-screen bg-[#0F1115] text-[#E2E8F0] flex flex-col p-4 md:p-6 font-sans relative overflow-x-hidden">
@@ -74,7 +87,7 @@ export default function ParticipantPanel({
       {/* Main Container Section */}
       <main className="flex-1 max-w-sm w-full mx-auto flex flex-col justify-center py-2">
         <AnimatePresence mode="wait">
-          {!me ? (
+          {!me && !isClassicSpectator ? (
             /* LAYER A: Participant registration form */
             <motion.div
               key="register"
@@ -84,8 +97,8 @@ export default function ParticipantPanel({
               className="bg-[#161920] border border-white/5 p-6 rounded-2xl shadow-xl w-full"
             >
               <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center border border-blue-500/20 mx-auto mb-3">
-                  <Ticket className="w-6 h-6" />
+                <div className="flex justify-center mb-4">
+                  <VouGanheiLogo size="sm" />
                 </div>
                 <h3 className="font-display text-lg font-bold text-white uppercase tracking-tight">
                   Entrar no Sorteio!
@@ -177,46 +190,69 @@ export default function ParticipantPanel({
               ) : (
                 /* Subview 2: Standard Lobby with customized Ticket Stub card */
                 <div className="flex flex-col gap-6">
-                  {/* Decorative Ticket stub design */}
-                  <div className="relative bg-gradient-to-b from-[#1A1D25] to-[#12141A] rounded-3xl border border-white/5 shadow-xl overflow-hidden shadow-slate-950/40">
-                    {/* Top yellow tag styling */}
-                    <div className="h-2 bg-gradient-to-r from-blue-550 to-indigo-550" />
-
-                    {/* Left and Right hole cutters representing real stub notches */}
-                    <div className="absolute top-1/2 -mt-3.5 -left-3.5 w-7 h-7 bg-[#0F1115] rounded-full border border-white/5 z-10" />
-                    <div className="absolute top-1/2 -mt-3.5 -right-3.5 w-7 h-7 bg-[#0F1115] rounded-full border border-white/5 z-10" />
-
-                    <div className="p-6 pb-4 flex flex-col items-center justify-center text-center">
-                      <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase mb-3">
-                        BILHETE OFICIAL DA SORTE
+                  {isClassicSpectator ? (
+                    <div className="relative bg-gradient-to-b from-[#1A1D25] to-[#12141A] rounded-3xl border border-white/5 shadow-xl overflow-hidden p-6 text-center">
+                      <div className="h-1 bg-gradient-to-r from-amber-400 to-amber-600 absolute top-0 inset-x-0" />
+                      <span className="text-[10px] font-black tracking-widest text-amber-500 uppercase block mb-3 font-mono animate-pulse">
+                        🏆 MODO DE SORTEIO CLÁSSICO
                       </span>
-
-                      <div className="py-2.5 px-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider select-none mb-4 flex items-center gap-1.5 animate-pulse font-mono">
-                        <CheckCircle className="w-3.5 h-3.5 text-blue-400" /> Você está na sala!
-                      </div>
-
-                      <h4 className="font-display font-black text-white text-lg truncate max-w-[200px]">
-                        {me.name}
+                      <h4 className="font-display font-black text-white text-lg">
+                        Acompanhe os Sorteios!
                       </h4>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Participante</p>
-                    </div>
-
-                    {/* Dotted cutting separator line */}
-                    <div className="border-t-2 border-dashed border-white/5 my-2 mx-6" />
-
-                    {/* Stub code details */}
-                    <div className="p-6 pt-4 text-center flex flex-col items-center">
-                      <span className="text-[9px] font-bold tracking-widest text-[#94A3B8] uppercase mb-1">
-                        NÚMERO DO SORTEIO
-                      </span>
-                      <div className="font-display font-black text-white text-5xl md:text-6xl tracking-tight select-none pb-2 neon-glow">
-                        #{me.ticketNumber}
-                      </div>
-                      <p className="text-[10px] text-slate-400 mt-2 max-w-[200px]">
-                        Guarde este número. Ele será exibido na tela central se seu bilhete for sorteado!
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                        Os organizadores estão sorteando números entre <strong className="text-amber-400 font-extrabold">{room.classicMin ?? 1}</strong> e <strong className="text-[#FBBF24] font-extrabold">{room.classicMax ?? 100}</strong> ao vivo!
                       </p>
+                      <div className="mt-5 py-3 px-4 bg-[#0F1115] border border-white/5 rounded-2xl flex flex-col items-center">
+                        <span className="text-[9px] font-semibold text-slate-550 uppercase tracking-widest block mb-1 font-mono">
+                          NÚMEROS SORTEADOS ATÉ AGORA
+                        </span>
+                        <div className="font-mono font-bold text-amber-500 text-lg">
+                          {displayedDrawnNumbers.length} número(s)
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : me ? (
+                    /* Decorative Ticket stub design */
+                    <div className="relative bg-gradient-to-b from-[#1A1D25] to-[#12141A] rounded-3xl border border-white/5 shadow-xl overflow-hidden shadow-slate-950/40">
+                      {/* Top yellow tag styling */}
+                      <div className="h-2 bg-gradient-to-r from-blue-550 to-indigo-550" />
+
+                      {/* Left and Right hole cutters representing real stub notches */}
+                      <div className="absolute top-1/2 -mt-3.5 -left-3.5 w-7 h-7 bg-[#0F1115] rounded-full border border-white/5 z-10" />
+                      <div className="absolute top-1/2 -mt-3.5 -right-3.5 w-7 h-7 bg-[#0F1115] rounded-full border border-white/5 z-10" />
+
+                      <div className="p-6 pb-4 flex flex-col items-center justify-center text-center">
+                        <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase mb-3">
+                          BILHETE OFICIAL DA SORTE
+                        </span>
+
+                        <div className="py-2.5 px-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider select-none mb-4 flex items-center gap-1.5 animate-pulse font-mono">
+                          <CheckCircle className="w-3.5 h-3.5 text-blue-400" /> Você está na sala!
+                        </div>
+
+                        <h4 className="font-display font-black text-white text-lg truncate max-w-[200px]">
+                          {me.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Participante</p>
+                      </div>
+
+                      {/* Dotted cutting separator line */}
+                      <div className="border-t-2 border-dashed border-white/5 my-2 mx-6" />
+
+                      {/* Stub code details */}
+                      <div className="p-6 pt-4 text-center flex flex-col items-center">
+                        <span className="text-[9px] font-bold tracking-widest text-[#94A3B8] uppercase mb-1">
+                          NÚMERO DO SORTEIO
+                        </span>
+                        <div className="font-display font-black text-white text-5xl md:text-6xl tracking-tight select-none pb-2 neon-glow">
+                          #{me.ticketNumber}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-2 max-w-[200px]">
+                          Guarde este número. Ele será exibido na tela central se seu bilhete for sorteado!
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
 
                   {/* Prizes check grid */}
                   <div className="bg-[#161920] rounded-2xl p-4 border border-white/5">
@@ -261,11 +297,16 @@ export default function ParticipantPanel({
       {/* Embedded footer signature */}
       <footer className="py-6 text-center mt-auto shrink-0 border-t border-white/5">
         <p className="text-[10px] text-slate-500 font-medium font-sans">
-          Criado em 2026 por Alison Fernando Rodrigues dos Santos - Sorte Grande
+          Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
         </p>
-        <p className="text-[9px] text-slate-600 font-mono mt-1">
-          Versão: 0.10 (Beta)
-        </p>
+        <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
+          <span>Versão: 0.11 (Beta)</span>
+          <span>•</span>
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-emerald-400 font-bold uppercase">Sincronizado ao Vivo</span>
+          </div>
+        </div>
       </footer>
     </div>
   );

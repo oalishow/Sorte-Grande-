@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound } from "lucide-react";
+import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus } from "lucide-react";
+import VouGanheiLogo from "./VouGanheiLogo";
 
 interface HomeProps {
   onCreateRoom: (roomName: string) => void;
@@ -14,6 +15,42 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
   const [roomCode, setRoomCode] = useState("");
   const [activeTab, setActiveTab] = useState<"create" | "join">("create");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // PWA Prompt & Standalone States
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    const checkStandalone = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone;
+    setIsStandalone(!!checkStandalone);
+
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    setIsIOS(/iphone|ipad|ipod/.test(userAgent));
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      alert("Para instalar nas configurações do seu navegador, procure a opção 'Instalar' ou 'Adicionar à tela de início'.");
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,18 +86,14 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#161920_1px,transparent_1px),linear-gradient(to_bottom,#161920_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40" />
 
       <div className="relative z-10 max-w-xl w-full flex flex-col items-center text-center">
-        {/* Animated Main Logo */}
+        {/* Animated Main Logo (VouGanhei! Theme) */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-[#0F1115] flex items-center justify-center shadow-xl shadow-amber-500/20 mb-6 border border-amber-300/30 overflow-visible"
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="mb-8"
         >
-          {/* Subtle outer glowing rings */}
-          <div className="absolute inset-0 rounded-3xl bg-amber-500/10 scale-125 blur-md animate-pulse pointer-events-none" />
-          <Gift className="w-11 h-11 text-[#0F1115] filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)] animate-bounce animate-pulse" style={{ animationDuration: "3s" }} />
-          <Sparkles className="absolute -top-1.5 -right-1.5 w-6 h-6 text-amber-100 animate-pulse" />
-          <Sparkles className="absolute -bottom-1 -left-1 w-4 h-4 text-amber-200 animate-pulse delay-500" />
+          <VouGanheiLogo size="lg" />
         </motion.div>
 
         {/* Catchy head titles */}
@@ -68,9 +101,9 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           initial={{ y: -15, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.5 }}
-          className="font-display text-4xl md:text-5xl font-extrabold text-white tracking-tight"
+          className="font-display text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 tracking-tight"
         >
-          Sorte grande
+          VouGanhei!
         </motion.h1>
 
         <motion.p
@@ -204,12 +237,122 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           </div>
         </div>
 
+        {/* Novidades e Atualizações Panel */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.45 }}
+          className="w-full mt-6 bg-[#161920]/80 backdrop-blur-md rounded-2xl p-5 border border-white/5 shadow-xl text-left"
+        >
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
+            <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+            <h3 className="font-display text-xs font-extrabold uppercase tracking-wider text-slate-300">
+              Novidades da Versão 0.11
+            </h3>
+            <span className="ml-auto text-[9px] font-mono font-bold bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
+              PWA ATIVO
+            </span>
+          </div>
+          <div className="space-y-2.5 text-xs text-slate-400">
+            <div className="flex items-start gap-2">
+              <span className="text-amber-500 font-bold mt-0.5">•</span>
+              <p>
+                <strong className="text-slate-200">Próximo Prêmio Rápido:</strong> Ao clicar em "Próximo Prêmio", o sorteio do próximo item inicia na sequência automaticamente, poupando caminhos.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-400 font-bold mt-0.5">•</span>
+              <p>
+                <strong className="text-slate-200">Instalação PWA:</strong> Adicione o <strong className="text-blue-400">VouGanhei!</strong> diretamente na sua tela inicial para acesso offline e fluido.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-400 font-bold mt-0.5">•</span>
+              <p>
+                <strong className="text-slate-200">Rede & Conexão:</strong> Status ativos no rodapé para garantir o seu sincronismo dinâmico nos sorteios ao vivo.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-purple-400 font-bold mt-0.5">•</span>
+              <p>
+                <strong className="text-slate-200">Nova Logo 3D:</strong> Identidade reformulada com um troféu reluzente de alta definição para celebrar cada vitória!
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* PWA Installation Panel */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.48 }}
+          className="w-full mt-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/5 to-transparent backdrop-blur-md rounded-2xl p-5 border border-blue-500/20 shadow-xl text-left relative overflow-hidden"
+        >
+          {/* subtle glow border indicator */}
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-blue-500 to-indigo-600" />
+          
+          <div className="flex items-center gap-2 mb-3">
+            <Smartphone className="w-5 h-5 text-blue-400 animate-bounce" />
+            <h3 className="font-display text-sm font-extrabold text-white">
+              Sorteios na sua Tela Inicial
+            </h3>
+            {isStandalone ? (
+              <span className="ml-auto text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
+                INSTALADO 🚀
+              </span>
+            ) : (
+              <span className="ml-auto text-[9px] font-mono font-bold bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">
+                DISPONÍVEL
+              </span>
+            )}
+          </div>
+
+          {isStandalone ? (
+            <p className="text-xs text-slate-400 leading-relaxed font-sans">
+              Você já está jogando na versão instalada do <strong className="text-blue-400 font-bold">VouGanhei!</strong>. Desfrute da tela cheia, sem barras do navegador, com máxima imersão!
+            </p>
+          ) : (
+            <div className="space-y-3 font-sans">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Adicione o <strong className="text-blue-400 font-bold">VouGanhei!</strong> na sua tela de início para acompanhar os sorteio em tempo real com animações fluidas e suporte offline.
+              </p>
+
+              {isIOS ? (
+                /* iOS Safari installation guidelines */
+                <div className="p-3 bg-white/5 border border-white/5 rounded-xl text-xs space-y-2 mt-2">
+                  <div className="flex items-center gap-1.5 font-semibold text-slate-200">
+                    <Share2 className="w-3.5 h-3.5 text-blue-400" /> Como Instalar no iPhone/iPad:
+                  </div>
+                  <ol className="list-decimal list-inside text-slate-400 space-y-1 text-[11px] leading-relaxed">
+                    <li>Toque no ícone de <strong className="text-blue-400 font-bold">Compartilhar</strong> (<Share2 className="w-3 h-3 inline text-blue-450" /> na barra inferior do Safari).</li>
+                    <li>Role para baixo e selecione <strong className="text-slate-200">Adicionar à Tela de Início</strong> (<Plus className="w-3 h-3 inline text-slate-200" />).</li>
+                    <li>Clique em adicionar para desfrutar como aplicativo de loteria!</li>
+                  </ol>
+                </div>
+              ) : (
+                /* Android / Chrome standard trigger */
+                <div className="flex flex-col gap-2 mt-2">
+                  <button
+                    onClick={handleInstallClick}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-500/10 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Instalar Aplicativo VouGanhei!
+                  </button>
+                  <p className="text-[10px] text-slate-500 text-center leading-normal">
+                    Se o instalador não abrir, toque em <strong className="text-slate-400 font-bold">Instalar aplicativo</strong> ou <strong className="text-slate-400 font-bold">Adicionar para a Tela Inicial</strong> nas preferências de seu navegador.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+
         {/* Sleek Master Panel Access Config Gear */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-12 flex items-center justify-center w-full"
+          className="mt-8 flex items-center justify-center w-full"
         >
           <button
             onClick={onGoToMaster}
@@ -221,13 +364,18 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
         </motion.div>
 
         {/* Footnote credits and signature */}
-        <div className="w-full text-center mt-12 pt-6 border-t border-white/5 opacity-80 shrink-0">
+        <div className="w-full text-center mt-8 pt-6 border-t border-white/5 opacity-80 shrink-0">
           <p className="text-[10px] text-slate-500 font-medium font-sans">
-            Criado em 2026 por Alison Fernando Rodrigues dos Santos - Sorte Grande
+            Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
           </p>
-          <p className="text-[9px] text-slate-600 font-mono mt-1">
-            Versão: 0.10 (Beta)
-          </p>
+          <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
+            <span>Versão: 0.11 (Beta)</span>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-emerald-400 font-bold uppercase">Conectado (PWA)</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

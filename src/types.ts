@@ -24,4 +24,9 @@ export interface Room {
   currentWinningNumber: number | null;
   drawingStartedAt: number | null;
   createdAt: number;
+  drawMode?: 'qrcode' | 'classic';
+  classicMin?: number;
+  classicMax?: number;
+  classicNoRepeat?: boolean;
+  classicDrawnNumbers?: number[];
 }

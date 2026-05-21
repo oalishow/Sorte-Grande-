@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient resembles the app twilight base -->
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1E222D" />
+      <stop offset="100%" stop-color="#0F1115" />
+    </radialGradient>
+    <!-- Gold gradients for the trophy -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082" />
+      <stop offset="50%" stop-color="#FFB300" />
+      <stop offset="100%" stop-color="#E65100" />
+    </linearGradient>
+    <linearGradient id="goldLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF9C4" />
+      <stop offset="100%" stop-color="#FFD54F" />
+    </linearGradient>
+    <!-- Cyan glow for highlight accents -->
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="100%" stop-color="#2979FF" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <rect width="500" height="500" x="6" y="6" rx="106" fill="none" stroke="url(#cyanGlow)" stroke-width="4" stroke-opacity="0.3" />
+
+  <!-- Outer Neon Rings -->
+  <circle cx="256" cy="256" r="185" fill="none" stroke="#FFB300" stroke-width="3" stroke-dasharray="8 8" stroke-opacity="0.4" />
+  <circle cx="256" cy="256" r="200" fill="none" stroke="url(#cyanGlow)" stroke-width="2" stroke-opacity="0.2" />
+
+  <!-- Confetti/Celebration Particles -->
+  <circle cx="150" cy="150" r="6" fill="#FF1744" />
+  <circle cx="360" cy="130" r="5" fill="#00E676" />
+  <circle cx="380" cy="340" r="6" fill="#2979FF" />
+  <circle cx="130" cy="360" r="7" fill="#AA00FF" />
+  <circle cx="256" cy="90" r="4" fill="#FFEA00" />
+
+  <!-- Sparkle Stars -->
+  <path d="M120 200 L124 212 L136 216 L124 220 L120 232 L116 220 L104 216 L116 212 Z" fill="#FFE082" />
+  <path d="M400 220 L403 229 L412 232 L403 235 L400 244 L397 235 L388 232 L397 229 Z" fill="#FFE082" />
+
+  <!-- Lucky Ticket behind -->
+  <g transform="translate(196, 120) rotate(-10)">
+    <rect width="140" height="85" rx="10" fill="#2962FF" stroke="#448AFF" stroke-width="5" />
+    <circle cx="0" cy="42" r="12" fill="#0F1115" />
+    <circle cx="140" cy="42" r="12" fill="#0F1115" />
+    <!-- Ticket Stars -->
+    <path d="M50 32 L53 41 L62 41 L55 46 L58 55 L50 50 L42 55 L45 46 L38 41 L47 41 Z" fill="#FFD54F" />
+    <path d="M90 32 L93 41 L102 41 L95 46 L98 55 L90 50 L82 55 L85 46 L78 41 L87 41 Z" fill="#FFD54F" />
+  </g>
+
+  <!-- Glowing Trophy Base & Handles -->
+  <g transform="translate(141, 190)">
+    <!-- Right Handle -->
+    <path d="M170 55 C220 55, 215 130, 170 130" fill="none" stroke="url(#gold)" stroke-width="15" stroke-linecap="round" />
+    <!-- Left Handle -->
+    <path d="M60 55 C10 55, 15 130, 60 130" fill="none" stroke="url(#gold)" stroke-width="15" stroke-linecap="round" />
+    
+    <!-- Trophy Main Cup -->
+    <path d="M55 30 H175 C175 30, 175 140, 115 170 C55 140, 55 30, 55 30 Z" fill="url(#gold)" />
+    <!-- Cup Rim highlight -->
+    <ellipse cx="115" cy="30" rx="60" ry="10" fill="url(#goldLight)" />
+    
+    <!-- V Design on Trophy (V de VouGanhei) -->
+    <path d="M95 65 L115 105 L135 65" fill="none" stroke="#6D4C41" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Stem/Column -->
+    <path d="M100 170 H130 L135 210 H95 Z" fill="url(#gold)" />
+    
+    <!-- Platform stand -->
+    <rect x="70" y="210" width="90" height="20" rx="6" fill="url(#gold)" />
+    <rect x="55" y="230" width="120" height="15" rx="4" fill="#E65100" />
+  </g>
+</svg>
