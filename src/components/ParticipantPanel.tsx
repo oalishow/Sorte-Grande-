@@ -4,6 +4,7 @@ import { Room, Participant, Prize } from "../types";
 import { Gift, Ticket, User, Users, Sparkles, LogOut, ArrowLeft, Heart, CheckCircle, Radio } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
+import TicketRevealAnimation from "./TicketRevealAnimation";
 
 interface ParticipantPanelProps {
   room: Room;
@@ -23,6 +24,19 @@ export default function ParticipantPanel({
   const [errorMsg, setErrorMsg] = useState("");
 
   const [drawFinished, setDrawFinished] = useState(false);
+  const [showJoinReveal, setShowJoinReveal] = useState(false);
+  const [hasShownReveal, setHasShownReveal] = useState(() => {
+    return sessionStorage.getItem(`revealed_${playerId}`) === 'true';
+  });
+
+  useEffect(() => {
+    const me = room.participants.find((p) => p.id === playerId);
+    if (me && !hasShownReveal) {
+      setShowJoinReveal(true);
+      setHasShownReveal(true);
+      sessionStorage.setItem(`revealed_${playerId}`, 'true');
+    }
+  }, [room.participants, hasShownReveal, playerId]);
 
   useEffect(() => {
     // Reset drawFinished when status changes to drawing or when the winning number/prize changes
@@ -65,11 +79,22 @@ export default function ParticipantPanel({
     : room.prizes.find((p) => p.id === room.activePrizeId);
   const isMeWinner = room.currentWinner && room.currentWinner.id === playerId;
   const isLastPrize = room.prizes.length > 0 && room.prizes.every((p) => p.winner !== null);
-  const drawDuration = isLastPrize ? 11000 : 7050;
-
+  // Adjusted to ~3-4 seconds as requested for the spin ("uns 3 segundos")
+  const drawDuration = isLastPrize ? 5500 : 3800;
 
   return (
     <div className="min-h-screen bg-[#0F1115] text-[#E2E8F0] flex flex-col p-4 md:p-6 font-sans relative overflow-x-hidden">
+      {/* Join Reveal Animation Overlay */}
+      <AnimatePresence>
+        {showJoinReveal && me && (
+          <TicketRevealAnimation
+            ticketNumber={me.ticketNumber}
+            name={me.name}
+            onComplete={() => setShowJoinReveal(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Background glow flares */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
