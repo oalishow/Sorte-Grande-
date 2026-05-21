@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus, Monitor } from "lucide-react";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
+import { apiFetch } from "../lib/api";
 
 interface HomeProps {
   onCreateRoom: (roomName: string, isOpenRoom?: boolean) => void;
@@ -23,7 +24,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
   useEffect(() => {
     const fetchOpenRooms = async () => {
       try {
-        const res = await fetch("/api/open-rooms");
+        const res = await apiFetch("/api/open-rooms");
         if (res.ok) {
           const data = await res.json();
           setOpenRooms(data.rooms || []);
@@ -97,6 +98,16 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
     onCreateRoom(roomName.trim(), isOpenRoom);
   };
 
+  const [isJoining, setIsJoining] = useState(false);
+
+  const startJoinAnimation = (roomCodeStr: string) => {
+    setIsJoining(true);
+    setTimeout(() => {
+      onJoinRoom(roomCodeStr);
+      setIsJoining(false);
+    }, 1500); // 1.5s delay for animation
+  };
+
   const handleJoinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -108,7 +119,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
       setErrorMsg("O código da sala deve conter exatamente 6 caracteres.");
       return;
     }
-    onJoinRoom(roomCode.trim().toUpperCase());
+    startJoinAnimation(roomCode.trim().toUpperCase());
   };
 
   return (
@@ -116,6 +127,49 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
       {/* Absolute elegant glowing backgrounds */}
       <div className="absolute top-12 left-1/4 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] glow-pulse" />
       <div className="absolute bottom-12 right-1/4 w-[450px] h-[450px] bg-indigo-500/10 rounded-full blur-[120px] glow-pulse" />
+
+      {/* Full-screen Loading Animation Overlay */}
+      <AnimatePresence>
+        {(isLoading || isJoining) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0F1115]/90 backdrop-blur-sm"
+          >
+            <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-blue-500/20 rounded-full blur-[80px] animate-pulse" />
+            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-indigo-500/20 rounded-full blur-[80px] animate-pulse" />
+            
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+              className="relative w-20 h-20 mb-6"
+            >
+              <div className="absolute inset-0 rounded-full border-t-4 border-b-4 border-blue-500 opacity-70" />
+              <div className="absolute inset-2 rounded-full border-l-4 border-r-4 border-indigo-500 opacity-70" />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <Sparkles className="w-6 h-6 text-amber-400 animate-pulse" />
+              </div>
+            </motion.div>
+            <motion.h2
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-2xl font-bold font-display text-white tracking-wide"
+            >
+              {activeTab === "create" ? "Preparando Sala Mágica..." : "Acessando Sorteio..."}
+            </motion.h2>
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-2 text-sm text-slate-400 font-sans max-w-xs text-center"
+            >
+              Sincronizando banco de dados em tempo real para a melhor experiência participativa.
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Grid structure for subtle patterns */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#161920_1px,transparent_1px),linear-gradient(to_bottom,#161920_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40" />
@@ -288,7 +342,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
                       <button
                         key={r.id}
                         type="button"
-                        onClick={() => onJoinRoom(r.id)}
+                        onClick={() => startJoinAnimation(r.id)}
                         className="w-full bg-[#0F1115] hover:bg-emerald-500/5 hover:border-emerald-500/35 border border-white/5 p-3 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer group"
                       >
                         <div className="space-y-0.5">

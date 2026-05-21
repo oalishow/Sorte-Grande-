@@ -4,6 +4,7 @@ import AdminPanel from "./components/AdminPanel";
 import ParticipantPanel from "./components/ParticipantPanel";
 import MasterPanel from "./components/MasterPanel";
 import { Room } from "./types";
+import { apiFetch } from "./lib/api";
 import { RefreshCw, ArrowLeft, AlertCircle, Sun, Moon, Wifi, WifiOff } from "lucide-react";
 
 export default function App() {
@@ -104,7 +105,7 @@ export default function App() {
     
     const fetchRoom = async () => {
       try {
-        const res = await fetch(`/api/rooms/${roomId}`);
+        const res = await apiFetch(`/api/rooms/${roomId}`);
         if (!res.ok) {
           if (res.status === 404) {
             throw new Error("Sala de sorteio não encontrada. Ela pode ter expirado ou sido encerrada.");

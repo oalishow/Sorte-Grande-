@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Room } from "../types";
 import CustomModal from "./CustomModal";
+import { apiFetch } from "../lib/api";
 
 interface MasterPanelProps {
   onBack: () => void;
@@ -50,7 +51,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
 
   const fetchTrashedRoomsList = async (pass: string) => {
     try {
-      const res = await fetch("/api/admin/rooms/trash", {
+      const res = await apiFetch("/api/admin/rooms/trash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pass }),

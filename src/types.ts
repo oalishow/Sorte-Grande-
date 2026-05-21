@@ -38,6 +38,7 @@ export interface Room {
   classicMin?: number;
   classicMax?: number;
   classicNoRepeat?: boolean;
+  qrcodeNoRepeat?: boolean;
   classicDrawnNumbers?: number[];
   isOpenRoom?: boolean;
   drawHistory?: DrawHistoryEntry[];

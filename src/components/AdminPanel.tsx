@@ -5,6 +5,7 @@ import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
+import { apiFetch } from "../lib/api";
 
 interface AdminPanelProps {
   room: Room;
@@ -168,7 +169,7 @@ export default function AdminPanel({
     isOpenRoom?: boolean;
   }) => {
     try {
-      await fetch(`/api/rooms/${room.id}/settings`, {
+      await apiFetch(`/api/rooms/${room.id}/settings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates)
@@ -531,7 +532,23 @@ export default function AdminPanel({
                 </button>
               </div>
 
-              <div className="w-full mt-6 pt-5 border-t border-white/5 flex flex-col items-center shrink-0">
+              {/* Opção para não repetir ganhadores no sorteio QRCode */}
+              <div className="w-full mb-2">
+                <div className="flex items-center justify-between p-2.5 px-3 bg-[#0F1115]/50 border border-white/5 rounded-xl select-none">
+                  <div className="flex flex-col pr-2 text-left">
+                    <span className="text-[11px] font-bold text-slate-200">Não Repetir Ganhador</span>
+                    <span className="text-[9px] text-slate-500 leading-normal mt-0.5">Participante só ganha 1 prêmio</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={room.qrcodeNoRepeat !== false}
+                    onChange={(e) => handleUpdateSettings({ qrcodeNoRepeat: e.target.checked })}
+                    className="w-4 h-4 bg-[#0F1115] border-white/10 rounded text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="w-full mt-2 pt-4 border-t border-white/5 flex flex-col items-center shrink-0">
                 <span className="text-[10px] font-semibold text-slate-550 uppercase tracking-widest block mb-2">
                   CÓDIGO MANUAL DA SALA
                 </span>

@@ -113,6 +113,7 @@ app.post("/api/rooms", (req, res) => {
     classicMin: 1,
     classicMax: 100,
     classicNoRepeat: true,
+    qrcodeNoRepeat: true,
     classicDrawnNumbers: [],
     isOpenRoom: !!isOpenRoom,
     drawHistory: [],
@@ -150,7 +151,7 @@ app.get("/api/rooms/:roomId", (req, res) => {
 // API: Update room configuration/settings or reset classic draws
 app.post("/api/rooms/:roomId/settings", (req, res) => {
   const { roomId } = req.params;
-  const { drawMode, classicMin, classicMax, classicNoRepeat, clearHistory, isOpenRoom } = req.body;
+  const { drawMode, classicMin, classicMax, classicNoRepeat, qrcodeNoRepeat, clearHistory, isOpenRoom } = req.body;
 
   const room = rooms[roomId.toUpperCase()];
   if (!room) {
@@ -163,6 +164,9 @@ app.post("/api/rooms/:roomId/settings", (req, res) => {
   }
   if (isOpenRoom !== undefined) {
     room.isOpenRoom = !!isOpenRoom;
+  }
+  if (qrcodeNoRepeat !== undefined) {
+    room.qrcodeNoRepeat = !!qrcodeNoRepeat;
   }
   if (classicMin !== undefined) {
     room.classicMin = Number(classicMin) !== undefined ? Number(classicMin) : 1;
@@ -436,13 +440,16 @@ app.post("/api/rooms/:roomId/draw", (req, res) => {
     return;
   }
 
-  // Filter participants who haven't won a prize yet (excluding current prize under redraw)
-  const educatorsWhoWon = room.prizes.filter(p => p.id !== prizeId && p.winner).map(p => p.winner!.id);
-  let availableParticipants = room.participants.filter(p => !educatorsWhoWon.includes(p.id));
-
-  // Fallback: If everyone won once, draw from everyone so nobody is excluded
-  if (availableParticipants.length === 0) {
-    availableParticipants = room.participants;
+  // Filter participants who haven't won a prize yet (if qrcodeNoRepeat is true)
+  let availableParticipants = room.participants;
+  if (room.qrcodeNoRepeat !== false) {
+    const educatorsWhoWon = room.prizes.filter(p => p.id !== prizeId && p.winner).map(p => p.winner!.id);
+    availableParticipants = room.participants.filter(p => !educatorsWhoWon.includes(p.id));
+  
+    // Fallback: If everyone won once, draw from everyone so nobody is excluded
+    if (availableParticipants.length === 0) {
+      availableParticipants = room.participants;
+    }
   }
 
   const winner = availableParticipants[Math.floor(Math.random() * availableParticipants.length)];
@@ -603,6 +610,7 @@ app.post("/api/admin/rooms/create-test", (req, res) => {
     classicMin: 1,
     classicMax: 100,
     classicNoRepeat: true,
+    qrcodeNoRepeat: true,
     classicDrawnNumbers: [],
   };
 
