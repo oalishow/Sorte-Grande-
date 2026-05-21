@@ -16,7 +16,16 @@ import {
 } from "lucide-react";
 import { Room } from "../types";
 import CustomModal from "./CustomModal";
-import { apiFetch } from "../lib/api";
+import { 
+  firebaseCreateRoom,
+  firebaseAddPrize,
+  firebaseGetRoomsList, 
+  firebaseGetTrashedRooms, 
+  firebaseTrashRoom, 
+  firebaseRestoreRoom, 
+  firebaseDeleteRoomPermanently, 
+  firebaseEmptyTrash 
+} from "../lib/firebase";
 
 interface MasterPanelProps {
   onBack: () => void;
@@ -51,15 +60,9 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
 
   const fetchTrashedRoomsList = async (pass: string) => {
     try {
-      const res = await apiFetch("/api/admin/rooms/trash", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pass }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTrashedRooms(data.rooms || []);
-      }
+      if (pass !== "7777") return;
+      const list = await firebaseGetTrashedRooms();
+      setTrashedRooms(list);
     } catch (err) {
       console.error(err);
     }
@@ -69,19 +72,12 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const res = await apiFetch("/api/admin/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pass }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Acesso negado.");
+      if (pass !== "7777") {
+        throw new Error("Acesso negado.");
       }
 
-      const data = await res.json();
-      setRooms(data.rooms || []);
+      const list = await firebaseGetRoomsList();
+      setRooms(list);
       setIsUnlocked(true);
       sessionStorage.setItem("master_password", pass);
 
@@ -107,25 +103,14 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const res = await apiFetch("/api/admin/rooms/create-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          password: "7777", 
-          roomName: testRoomName || undefined 
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erro ao criar sala de teste.");
-      }
-
-      const newTestRoom: Room = await res.json();
-      // Add local storage admin authorization flag for this room
-      localStorage.setItem(`raffle_room_${newTestRoom.id}_creator`, "true");
+      const roomName = testRoomName || "Sala de Testes 🧪";
+      const newTestRoom = await firebaseCreateRoom(roomName, "master_test_id", true);
       
-      // Select and redirect to admin panel for this room instantly!
+      await firebaseAddPrize(newTestRoom.id, "Kit Caneca e Chocolate 🍫☕");
+      await firebaseAddPrize(newTestRoom.id, "Garrafa Térmica Premium 🥤");
+      await firebaseAddPrize(newTestRoom.id, "Fone de Ouvido Bluetooth 🎧");
+      
+      localStorage.setItem(`raffle_room_${newTestRoom.id}_creator`, "true");
       onSelectAdminRoom(newTestRoom.id);
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -143,18 +128,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   const executeDeleteRoom = async (roomId: string) => {
     setIsLoading(true);
     try {
-      const res = await apiFetch("/api/admin/rooms/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "7777", roomId }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erro ao excluir.");
-      }
-
-      // Refresh the list immediately
+      await firebaseTrashRoom(roomId);
       await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -167,17 +141,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   const handleRestoreRoom = async (roomId: string) => {
     setIsLoading(true);
     try {
-      const res = await apiFetch("/api/admin/rooms/restore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "7777", roomId }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erro ao restaurar a sala.");
-      }
-
+      await firebaseRestoreRoom(roomId);
       await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -194,17 +158,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   const executeDeleteRoomPermanently = async (roomId: string) => {
     setIsLoading(true);
     try {
-      const res = await apiFetch("/api/admin/rooms/delete-permanently", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "7777", roomId }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erro ao excluir permanentemente.");
-      }
-
+      await firebaseDeleteRoomPermanently(roomId);
       await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -219,17 +173,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     if (!confirmChoice) return;
     setIsLoading(true);
     try {
-      const res = await apiFetch("/api/admin/rooms/empty-trash", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: "7777" }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erro ao limpar.");
-      }
-
+      await firebaseEmptyTrash();
       await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);

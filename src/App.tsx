@@ -5,6 +5,15 @@ import ParticipantPanel from "./components/ParticipantPanel";
 import MasterPanel from "./components/MasterPanel";
 import { Room } from "./types";
 import { apiFetch } from "./lib/api";
+import { 
+  firebaseCreateRoom, 
+  firebaseJoinRoom, 
+  firebaseAddPrize, 
+  firebaseRemovePrize, 
+  firebaseDrawPrize, 
+  firebaseResetDraw, 
+  firebaseSubscribeRoom 
+} from "./lib/firebase";
 import { RefreshCw, ArrowLeft, AlertCircle, Sun, Moon, Wifi, WifiOff } from "lucide-react";
 
 export default function App() {
@@ -97,42 +106,21 @@ export default function App() {
     return () => window.removeEventListener("popstate", parseUrl);
   }, []);
 
-  // Sync Room polling interval
+  // Sync Room real-time subscription
   useEffect(() => {
     if (page !== "room" || !roomId) return;
 
-    let isSubscribed = true;
-    
-    const fetchRoom = async () => {
-      try {
-        const res = await apiFetch(`/api/rooms/${roomId}`);
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error("Sala de sorteio não encontrada. Ela pode ter expirado ou sido encerrada.");
-          }
-          throw new Error("Erro de comunicação com o servidor.");
-        }
-        const data: Room = await res.json();
-        if (isSubscribed) {
-          setRoomState(data);
-          setError(null);
-        }
-      } catch (err: any) {
-        if (isSubscribed) {
-          setError(err.message || "Erro de conexão.");
-        }
+    const unsubscribe = firebaseSubscribeRoom(roomId, (room) => {
+      if (room) {
+        setRoomState(room);
+        setError(null);
+      } else {
+        setError("Sala de sorteio não encontrada. Ela pode ter expirado ou sido encerrada.");
       }
-    };
-
-    // Initial load
-    fetchRoom();
-
-    // Poll every 1200ms
-    const interval = setInterval(fetchRoom, 1200);
+    });
 
     return () => {
-      isSubscribed = false;
-      clearInterval(interval);
+      unsubscribe();
     };
   }, [page, roomId]);
 
@@ -146,16 +134,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch("/api/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomName, creatorId: playerId, isOpenRoom }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Erro ao criar sala.");
-      }
-      const newRoom: Room = await res.json();
+      const newRoom = await firebaseCreateRoom(roomName, playerId, isOpenRoom);
       
       // Store Creator ownership flags in browser to avoid logins
       localStorage.setItem(`raffle_room_${newRoom.id}_creator`, "true");
@@ -176,27 +155,7 @@ export default function App() {
   const handleJoinParticipant = async (name: string) => {
     setError(null);
     try {
-      const res = await apiFetch(`/api/join`, {
-        method: "POST", // mapped through root or api rules
-      });
-      // Try posting directly to room join
-      const joinres = await apiFetch(`/api/rooms/${roomId}/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, playerId }),
-      });
-
-      if (!joinres.ok) {
-        const data = await joinres.json();
-        throw new Error(data.error || "Falha ao registrar participante.");
-      }
-      
-      // Immediate pull update
-      const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
-      if (updatedRes.ok) {
-        const updatedData = await updatedRes.json();
-        setRoomState(updatedData);
-      }
+      await firebaseJoinRoom(roomId, name, playerId);
     } catch (err: any) {
       throw new Error(err.message || "Não foi possível participar do sorteio.");
     }
@@ -204,19 +163,7 @@ export default function App() {
 
   const handleAddPrize = async (name: string) => {
     try {
-      const masterPassword = sessionStorage.getItem("master_password") || "";
-      const res = await apiFetch(`/api/rooms/${roomId}/prizes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, playerId, masterPassword }),
-      });
-      
-      if (res.ok) {
-        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
-        if (updatedRes.ok) {
-          setRoomState(await updatedRes.json());
-        }
-      }
+      await firebaseAddPrize(roomId, name);
     } catch (err) {
       console.error("Erro ao adicionar prêmio", err);
     }
@@ -224,21 +171,7 @@ export default function App() {
 
   const handleRemovePrize = async (prizeId: string) => {
     try {
-      const masterPassword = sessionStorage.getItem("master_password") || "";
-      const params = new URLSearchParams({
-        playerId,
-        masterPassword,
-      });
-      const res = await apiFetch(`/api/rooms/${roomId}/prizes/${prizeId}?${params.toString()}`, {
-        method: "DELETE",
-      });
-      
-      if (res.ok) {
-        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
-        if (updatedRes.ok) {
-          setRoomState(await updatedRes.json());
-        }
-      }
+      await firebaseRemovePrize(roomId, prizeId);
     } catch (err) {
       console.error("Erro ao remover prêmio", err);
     }
@@ -246,18 +179,7 @@ export default function App() {
 
   const handleDrawPrize = async (prizeId: string) => {
     try {
-      const res = await apiFetch(`/api/rooms/${roomId}/draw`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prizeId }),
-      });
-      
-      if (res.ok) {
-        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
-        if (updatedRes.ok) {
-          setRoomState(await updatedRes.json());
-        }
-      }
+      await firebaseDrawPrize(roomId, prizeId);
     } catch (err) {
       console.error("Erro ao realizar sorteio", err);
     }
@@ -265,16 +187,7 @@ export default function App() {
 
   const handleResetDrawState = async () => {
     try {
-      const res = await apiFetch(`/api/rooms/${roomId}/reset`, {
-        method: "POST",
-      });
-      
-      if (res.ok) {
-        const updatedRes = await apiFetch(`/api/rooms/${roomId}`);
-        if (updatedRes.ok) {
-          setRoomState(await updatedRes.json());
-        }
-      }
+      await firebaseResetDraw(roomId);
     } catch (err) {
       console.error("Erro ao restaurar estado", err);
     }

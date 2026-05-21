@@ -5,7 +5,7 @@ import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
-import { apiFetch } from "../lib/api";
+import { firebaseUpdateSettings, firebaseJoinRoom } from "../lib/firebase";
 
 interface AdminPanelProps {
   room: Room;
@@ -165,15 +165,12 @@ export default function AdminPanel({
     classicMin?: number;
     classicMax?: number;
     classicNoRepeat?: boolean;
+    qrcodeNoRepeat?: boolean;
     clearHistory?: boolean;
     isOpenRoom?: boolean;
   }) => {
     try {
-      await apiFetch(`/api/rooms/${room.id}/settings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates)
-      });
+      await firebaseUpdateSettings(room.id, updates);
     } catch (err) {
       console.error("Erro ao salvar opções de sorteio clássico:", err);
     }
@@ -191,25 +188,10 @@ export default function AdminPanel({
     setManualError("");
     try {
       const manualPlayerId = `manual_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const joinres = await apiFetch(`/api/rooms/${room.id}/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          name: manualName.trim(), 
-          playerId: manualPlayerId,
-          requesterPlayerId: playerId,
-          masterPassword: isMaster ? "7777" : undefined
-        }),
-      });
-
-      if (!joinres.ok) {
-        const data = await joinres.json();
-        throw new Error(data.error || "Falha ao registrar participante.");
-      }
-      
+      await firebaseJoinRoom(room.id, manualName.trim(), manualPlayerId);
       setManualName("");
     } catch (err: any) {
-      setManualError(err.message || "Erro ao sortear.");
+      setManualError(err.message || "Falha ao registrar participante.");
     } finally {
       setIsSubmittingManual(false);
     }

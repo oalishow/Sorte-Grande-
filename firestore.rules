@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net default catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /rooms/{roomId} {
+      // Allow general public reads and listings for rooms (e.g. for Home open rooms and guest lookups)
+      allow read: if true;
+      
+      // Allow creation under strict schema validations
+      allow create: if isValidId(roomId) 
+        && isValidRoom(request.resource.data)
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.id == roomId;
+        
+      // Allow updates under status transitions and shape checks
+      allow update: if isValidId(roomId) 
+        && isValidRoom(request.resource.data)
+        && request.resource.data.id == roomId;
+        
+      // Allow deletion (e.g. for Master delete permanently)
+      allow delete: if isValidId(roomId);
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[A-Z0-9]{6}$'); 
+    }
+
+    function isValidRoom(room) {
+      return room.id is string && room.id.size() == 6
+        && room.name is string && room.name.size() > 0 && room.name.size() <= 100
+        && room.creatorId is string && room.creatorId.size() <= 64
+        && room.status is string && (room.status == 'waiting' || room.status == 'drawing' || room.status == 'drawn' || room.status == 'finished')
+        && (room.activePrizeId == null || (room.activePrizeId is string && room.activePrizeId.size() <= 64))
+        && room.createdAt is number;
+    }
+  }
+}

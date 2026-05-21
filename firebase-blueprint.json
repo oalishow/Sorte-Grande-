@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Participant": {
+      "title": "Participant",
+      "description": "A player who has joined the raffle room",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ticketNumber": { "type": "number" },
+        "joinedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "ticketNumber", "joinedAt"]
+    },
+    "Prize": {
+      "title": "Prize",
+      "description": "A raffle prize that can be won",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "winner": { "$ref": "Participant" },
+        "drawnAt": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "DrawHistoryEntry": {
+      "title": "DrawHistoryEntry",
+      "description": "Historical record of a drawn prize",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "prizeName": { "type": "string" },
+        "winnerName": { "type": "string" },
+        "ticketNumber": { "type": "number" },
+        "drawMode": { "type": "string", "enum": ["qrcode", "classic"] },
+        "drawnAt": { "type": "number" }
+      },
+      "required": ["id", "prizeName", "winnerName", "ticketNumber", "drawMode", "drawnAt"]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "A dynamic real-time raffle room holding participant slots and prize draws",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "status": { "type": "string", "enum": ["waiting", "drawing", "drawn", "finished"] },
+        "activePrizeId": { "type": "string" },
+        "currentWinningNumber": { "type": "number" },
+        "drawingStartedAt": { "type": "number" },
+        "createdAt": { "type": "number" },
+        "deletedAt": { "type": "number" },
+        "drawMode": { "type": "string", "enum": ["qrcode", "classic"] },
+        "classicMin": { "type": "number" },
+        "classicMax": { "type": "number" },
+        "classicNoRepeat": { "type": "boolean" },
+        "qrcodeNoRepeat": { "type": "boolean" },
+        "isOpenRoom": { "type": "boolean" }
+      },
+      "required": ["id", "name", "creatorId", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": "Room",
+      "description": "The dynamic real-time raffle room document containing state lists"
+    }
+  }
+}

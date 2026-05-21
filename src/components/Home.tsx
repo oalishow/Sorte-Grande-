@@ -4,6 +4,7 @@ import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award,
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
 import { apiFetch } from "../lib/api";
+import { firebaseGetOpenRooms } from "../lib/firebase";
 
 interface HomeProps {
   onCreateRoom: (roomName: string, isOpenRoom?: boolean) => void;
@@ -24,17 +25,21 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
   useEffect(() => {
     const fetchOpenRooms = async () => {
       try {
-        const res = await apiFetch("/api/open-rooms");
-        if (res.ok) {
-          const data = await res.json();
-          setOpenRooms(data.rooms || []);
-        }
+        const rooms = await firebaseGetOpenRooms();
+        const formatted = rooms.map(r => ({
+          id: r.id,
+          name: r.name,
+          status: r.status,
+          participantsCount: r.participants.length,
+          prizesCount: r.prizes.length
+        }));
+        setOpenRooms(formatted);
       } catch (err) {
         // ignore fetch errors silently
       }
     };
     fetchOpenRooms();
-    const interval = setInterval(fetchOpenRooms, 1500);
+    const interval = setInterval(fetchOpenRooms, 3000);
     return () => clearInterval(interval);
   }, []);
 
