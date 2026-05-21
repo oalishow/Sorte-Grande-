@@ -269,7 +269,7 @@ export default function AdminPanel({
   };
 
   // Derive join URL
-  const joinUrl = `${appUrl}/room/${room.id}`;
+  const joinUrl = `${appUrl}/room/${room.id}?role=participant`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=0-0-0&bgcolor=255-255-255&qzone=2&data=${encodeURIComponent(
     joinUrl
   )}&t=${room.id}`;
@@ -334,7 +334,7 @@ export default function AdminPanel({
                  `📍 *Sala do Sorteio:* ${room.name} (#${room.id})\n` +
                  `\n` +
                  `Assista aos próximos sorteios ao vivo pelo link no seu celular ou PC:\n` +
-                 `${appUrl}/room/${room.id}\n` +
+                 `${appUrl}/room/${room.id}?role=participant\n` +
                  `\n` +
                  `--\n` +
                  `Gerado por VouGanhei! Sorteador Técnico de Alta Performance. ✨`;
