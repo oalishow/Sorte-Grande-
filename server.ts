@@ -484,6 +484,52 @@ app.post("/api/rooms/:roomId/reset", (req, res) => {
   res.json(room);
 });
 
+// API: Finish a room (Close/End raffle)
+app.post("/api/rooms/:roomId/finish", (req, res) => {
+  const { roomId } = req.params;
+  const { playerId, masterPassword } = req.body;
+  const room = rooms[roomId.toUpperCase()];
+  if (!room) {
+    res.status(404).json({ error: "Sala de sorteio não encontrada." });
+    return;
+  }
+  const isCreator = playerId && playerId === room.creatorId;
+  const isMaster = masterPassword === "7777";
+  if (!isCreator && !isMaster) {
+    res.status(403).json({ error: "Apenas o criador da sala ou o administrador mestre pode encerrar o sorteio." });
+    return;
+  }
+  room.status = "finished";
+  room.activePrizeId = null;
+  room.currentWinner = null;
+  room.currentWinningNumber = null;
+  room.drawingStartedAt = null;
+  res.json(room);
+});
+
+// API: Reopen a finished room
+app.post("/api/rooms/:roomId/reopen", (req, res) => {
+  const { roomId } = req.params;
+  const { playerId, masterPassword } = req.body;
+  const room = rooms[roomId.toUpperCase()];
+  if (!room) {
+    res.status(404).json({ error: "Sala de sorteio não encontrada." });
+    return;
+  }
+  const isCreator = playerId && playerId === room.creatorId;
+  const isMaster = masterPassword === "7777";
+  if (!isCreator && !isMaster) {
+    res.status(403).json({ error: "Apenas o criador da sala ou o administrador mestre pode reabrir o sorteio." });
+    return;
+  }
+  room.status = "waiting";
+  room.activePrizeId = null;
+  room.currentWinner = null;
+  room.currentWinningNumber = null;
+  room.drawingStartedAt = null;
+  res.json(room);
+});
+
 // API: Admin: List all active rooms (Requires master password 7777)
 app.post("/api/admin/rooms", (req, res) => {
   const { password } = req.body;

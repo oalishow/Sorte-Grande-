@@ -27,7 +27,7 @@ export interface Room {
   creatorId: string;
   participants: Participant[];
   prizes: Prize[];
-  status: 'waiting' | 'drawing' | 'drawn';
+  status: 'waiting' | 'drawing' | 'drawn' | 'finished';
   activePrizeId: string | null;
   currentWinner: Participant | null;
   currentWinningNumber: number | null;
