@@ -752,7 +752,10 @@ export default function AdminPanel({
               <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                 <AnimatePresence mode="popLayout">
                   {room.prizes.map((p) => {
-                    const cannotDraw = room.status === "drawing" || (room.drawMode !== "classic" && room.participants.length === 0);
+                    const isRecycleDraw = p.winner !== null;
+                    const cannotDraw = room.status === "drawing" && !isRecycleDraw;
+                    const noParticipants = room.drawMode !== "classic" && room.participants.length === 0;
+                    
                     return (
                       <motion.div
                         key={p.id}
@@ -796,8 +799,8 @@ export default function AdminPanel({
                                 onDrawPrize(p.id);
                                 window.scrollTo({ top: 0, behavior: "smooth" });
                               }}
-                              disabled={cannotDraw}
-                              className="w-full py-1 text-[10px] bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-450 font-bold tracking-wider rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase disabled:opacity-40 disabled:cursor-not-allowed border outline-none"
+                              disabled={room.status === "drawing" && room.activePrizeId === p.id}
+                              className="w-full py-1 text-[10px] bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-450 font-bold tracking-wider rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase border outline-none disabled:opacity-40 disabled:cursor-not-allowed"
                               title="Caso a pessoa não esteja presente, clique aqui para sortear novamente"
                             >
                               <RefreshCw className="w-3 h-3 text-rose-450 animate-spin" style={{ animationDuration: "15s" }} />
@@ -810,7 +813,7 @@ export default function AdminPanel({
                               onDrawPrize(p.id);
                               window.scrollTo({ top: 0, behavior: "smooth" });
                             }}
-                            disabled={cannotDraw}
+                            disabled={cannotDraw || noParticipants}
                             className="w-full py-1.5 bg-[#2563EB] text-white text-xs font-bold tracking-wider rounded-lg shadow-md transition-all hover:bg-[#1D4ED8] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 uppercase outline-none"
                           >
                             <Sparkles className="w-3.5 h-3.5" />

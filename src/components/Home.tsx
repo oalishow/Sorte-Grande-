@@ -26,7 +26,16 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
     const fetchOpenRooms = async () => {
       try {
         const rooms = await firebaseGetOpenRooms();
-        const formatted = rooms.map(r => ({
+        
+        // Filter out rooms where all prizes have been drawn
+        const activeRooms = rooms.filter(r => {
+          if (r.prizes.length === 0) return true;
+          const allPrizesDrawn = r.prizes.every(p => p.winner !== null);
+          // Only hide if all prizes are drawn AND the room isn't currently in a drawing animation
+          return !allPrizesDrawn || r.status === "drawing";
+        });
+
+        const formatted = activeRooms.map(r => ({
           id: r.id,
           name: r.name,
           status: r.status,
@@ -489,7 +498,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
             <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
             <h3 className="font-display text-xs font-extrabold uppercase tracking-wider text-slate-300">
-              Novidades da Versão 0.14
+              Novidades da Versão 0.15
             </h3>
             <span className="ml-auto text-[9px] font-mono font-bold bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
               PWA ATIVO
@@ -611,7 +620,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
             Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
           </p>
           <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
-            <span>Versão: 0.14 (Beta)</span>
+            <span>Versão: 0.15 (Beta)</span>
             <span>•</span>
             <span>Build: 2026-05-21</span>
             <span>•</span>
