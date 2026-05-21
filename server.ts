@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import { Room, Participant, Prize } from "./src/types";
 
@@ -45,6 +46,13 @@ function saveDB() {
 
 // Initialize persistence
 loadDB();
+
+// Setup CORS to allow cross-origin requests from netlify and localhost
+app.use(cors({
+  origin: ['https://vouganhei.netlify.app', 'http://localhost:5173', 'http://localhost:3000', '*', /.*\.run\.app/],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 
