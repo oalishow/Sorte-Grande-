@@ -18,7 +18,7 @@ app.get("/api/health", (req, res) => {
 
 // API: Create new room
 app.post("/api/rooms", (req, res) => {
-  const { roomName, creatorId } = req.body;
+  const { roomName, creatorId, isOpenRoom } = req.body;
   if (!roomName) {
     res.status(400).json({ error: "O nome da sala é obrigatório." });
     return;
@@ -61,10 +61,25 @@ app.post("/api/rooms", (req, res) => {
     classicMax: 100,
     classicNoRepeat: true,
     classicDrawnNumbers: [],
+    isOpenRoom: !!isOpenRoom,
   };
 
   rooms[roomId] = newRoom;
   res.status(201).json(newRoom);
+});
+
+// API: List open rooms publicly
+app.get("/api/open-rooms", (req, res) => {
+  const openRoomsList = Object.values(rooms)
+    .filter((r) => r.isOpenRoom === true)
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: r.status,
+      participantsCount: r.participants.length,
+      prizesCount: r.prizes.length,
+    }));
+  res.json({ rooms: openRoomsList });
 });
 
 // API: Get room status
@@ -81,7 +96,7 @@ app.get("/api/rooms/:roomId", (req, res) => {
 // API: Update room configuration/settings or reset classic draws
 app.post("/api/rooms/:roomId/settings", (req, res) => {
   const { roomId } = req.params;
-  const { drawMode, classicMin, classicMax, classicNoRepeat, clearHistory } = req.body;
+  const { drawMode, classicMin, classicMax, classicNoRepeat, clearHistory, isOpenRoom } = req.body;
 
   const room = rooms[roomId.toUpperCase()];
   if (!room) {
@@ -91,6 +106,9 @@ app.post("/api/rooms/:roomId/settings", (req, res) => {
 
   if (drawMode !== undefined) {
     room.drawMode = drawMode;
+  }
+  if (isOpenRoom !== undefined) {
+    room.isOpenRoom = !!isOpenRoom;
   }
   if (classicMin !== undefined) {
     room.classicMin = Number(classicMin) !== undefined ? Number(classicMin) : 1;

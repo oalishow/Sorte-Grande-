@@ -29,4 +29,5 @@ export interface Room {
   classicMax?: number;
   classicNoRepeat?: boolean;
   classicDrawnNumbers?: number[];
+  isOpenRoom?: boolean;
 }

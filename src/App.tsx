@@ -141,14 +141,14 @@ export default function App() {
     window.dispatchEvent(new Event("popstate"));
   };
 
-  const handleCreateRoom = async (roomName: string) => {
+  const handleCreateRoom = async (roomName: string, isOpenRoom?: boolean) => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomName, creatorId: playerId }),
+        body: JSON.stringify({ roomName, creatorId: playerId, isOpenRoom }),
       });
       if (!res.ok) {
         const data = await res.json();

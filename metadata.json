@@ -1,6 +1,6 @@
 {
   "name": "VouGanhei!",
-  "description": "Sorteador de prêmios em tempo real por sala virtual com QR Code.",
+  "description": "O sistema de sorteios virtuais interativos em tempo real mais moderno com suporte a QR Code e PWA.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

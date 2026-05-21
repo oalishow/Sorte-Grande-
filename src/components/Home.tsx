@@ -5,7 +5,7 @@ import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
 
 interface HomeProps {
-  onCreateRoom: (roomName: string) => void;
+  onCreateRoom: (roomName: string, isOpenRoom?: boolean) => void;
   onJoinRoom: (roomCode: string) => void;
   isLoading: boolean;
   onGoToMaster?: () => void;
@@ -15,7 +15,27 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
   const [roomName, setRoomName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [activeTab, setActiveTab] = useState<"create" | "join">("create");
+  const [isOpenRoom, setIsOpenRoom] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [openRooms, setOpenRooms] = useState<Array<{ id: string; name: string; status: string; participantsCount: number; prizesCount: number }>>([]);
+
+  // Fetch open rooms dynamically
+  useEffect(() => {
+    const fetchOpenRooms = async () => {
+      try {
+        const res = await fetch("/api/open-rooms");
+        if (res.ok) {
+          const data = await res.json();
+          setOpenRooms(data.rooms || []);
+        }
+      } catch (err) {
+        // ignore fetch errors silently
+      }
+    };
+    fetchOpenRooms();
+    const interval = setInterval(fetchOpenRooms, 1500);
+    return () => clearInterval(interval);
+  }, []);
 
   // Custom Modal States
   const [modalOpen, setModalOpen] = useState(false);
@@ -74,7 +94,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
       setErrorMsg("Por favor, digite um nome para a sua sala.");
       return;
     }
-    onCreateRoom(roomName.trim());
+    onCreateRoom(roomName.trim(), isOpenRoom);
   };
 
   const handleJoinSubmit = (e: React.FormEvent) => {
@@ -125,9 +145,9 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           initial={{ y: -10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="mt-3 text-slate-400 font-sans text-sm md:text-base max-w-md"
+          className="mt-4 text-slate-400 font-sans text-sm md:text-base max-w-lg leading-relaxed"
         >
-          Crie uma sala de sorteio interativa. Seus convidados escaneiam o QR Code, geram seu próprio pin e assistem à rotação de números ao vivo!
+          O sistema de sorteios virtuais em tempo real mais dinâmico e inovador. Crie salas interativas em segundos, distribua bilhetes através de QR Code na tela e proporcione uma experiência vibrante e 100% automatizada direto no dispositivo dos participantes!
         </motion.p>
 
         {/* Tab selection */}
@@ -173,7 +193,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           )}
 
           {activeTab === "create" ? (
-            <form onSubmit={handleCreateSubmit} className="space-y-4">
+            <form onSubmit={handleCreateSubmit} className="space-y-5">
               <div className="text-left">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                   Nome do Sorteio / Evento
@@ -193,6 +213,50 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
                 </div>
               </div>
 
+              {/* Open vs Closed room configuration option */}
+              <div className="text-left space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Acessibilidade da Sala
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsOpenRoom(false)}
+                    className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      !isOpenRoom
+                        ? "bg-[#0F1115] border-blue-500 text-white shadow-xl"
+                        : "bg-[#0F1115]/40 border-white/5 text-slate-400 hover:border-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wide">
+                      <Shield className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>Sala Fechada</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 font-sans leading-relaxed">
+                      Privada. Os participantes precisam digitar o código correspondente de 6 dígitos para entrar no lobby.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsOpenRoom(true)}
+                    className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      isOpenRoom
+                        ? "bg-[#0F1115] border-emerald-500 text-white shadow-xl"
+                        : "bg-[#0F1115]/40 border-white/5 text-slate-400 hover:border-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wide">
+                      <Radio className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+                      <span>Sala Aberta</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 font-sans leading-relaxed">
+                      Pública. Sua sala aparecerá listada na tela de todos os participantes conectados sem necessidade de senha!
+                    </p>
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={isLoading}
@@ -202,53 +266,157 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
               </button>
             </form>
           ) : (
-            <form onSubmit={handleJoinSubmit} className="space-y-4">
-              <div className="text-left">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Código da Sala (6 Dígitos)
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    value={roomCode}
-                    onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                    placeholder="Ex: SR62A1"
-                    className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-center text-xl font-mono font-bold tracking-widest text-blue-400 outline-none transition-all placeholder:text-slate-600"
-                  />
-                  <div className="absolute right-3.5 top-3.5 text-slate-600">
-                    <KeyRound className="w-5 h-5" />
+            <div className="space-y-6">
+              {/* Active Open Rooms Listing */}
+              {openRooms.length > 0 && (
+                <div className="text-left space-y-3 pb-5 border-b border-white/5">
+                  <div className="flex items-center gap-1.5">
+                    <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      Salas Abertas Disponíveis
+                    </span>
+                    <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                      {openRooms.length} ativas
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-sans leading-normal">
+                    Toque em uma sala pública abaixo para entrar instantaneamente, sem precisar de senha ou código!
+                  </p>
+                  
+                  <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                    {openRooms.map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => onJoinRoom(r.id)}
+                        className="w-full bg-[#0F1115] hover:bg-emerald-500/5 hover:border-emerald-500/35 border border-white/5 p-3 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer group"
+                      >
+                        <div className="space-y-0.5">
+                          <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
+                            {r.name}
+                          </h4>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                            <span>Código: #{r.id}</span>
+                            <span>•</span>
+                            <span>{r.participantsCount} participantes</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold px-2.5 py-1 rounded-lg group-hover:scale-105 transition-all">
+                          Entrar ✦
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-white hover:bg-slate-100 text-[#0F1115] font-bold py-3.5 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed uppercase"
-              >
-                {isLoading ? "Entrando..." : "Entrar no Sorteio →"}
-              </button>
-            </form>
+              <form onSubmit={handleJoinSubmit} className="space-y-4">
+                <div className="text-left">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Código da Sala (6 Dígitos)
+                    </label>
+                    {openRooms.length > 0 && (
+                      <span className="text-[10px] text-slate-500 italic">Ou selecione uma sala aberta acima</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      value={roomCode}
+                      onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                      placeholder="Ex: SR62A1"
+                      className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-center text-xl font-mono font-bold tracking-widest text-blue-400 outline-none transition-all placeholder:text-slate-600"
+                    />
+                    <div className="absolute right-3.5 top-3.5 text-slate-600">
+                      <KeyRound className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-white hover:bg-slate-100 text-[#0F1115] font-bold py-3.5 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed uppercase"
+                >
+                  {isLoading ? "Entrando..." : "Entrar no Sorteio →"}
+                </button>
+              </form>
+            </div>
           )}
         </motion.div>
 
-        {/* Feature grid tags */}
-        <div className="grid grid-cols-2 gap-4 w-full mt-12 text-left">
-          <div className="bg-[#161920]/60 border border-white/5 p-4 rounded-xl flex items-start gap-3">
-            <Radio className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-xs font-semibold text-white">Sincronização ao Vivo</h4>
-              <p className="text-slate-500 text-xs mt-1">Todos assistem o spinner de números girar ao mesmo tempo.</p>
-            </div>
+        {/* Quick standout feature cards */}
+        <div className="w-full mt-12 text-left space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+            <h3 className="font-display text-xs font-black uppercase tracking-widest text-slate-400">
+              Recursos em Destaque
+            </h3>
           </div>
-          <div className="bg-[#161920]/60 border border-white/5 p-4 rounded-xl flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-xs font-semibold text-white">Prêmios Ilimitados</h4>
-              <p className="text-slate-500 text-xs mt-1">Configure todos os prêmios da sua festa e controle os sorteios.</p>
-            </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            <motion.div
+              whileHover={{ y: -4, scale: 1.01 }}
+              transition={{ duration: 0.2 }}
+              className="bg-[#161920] border border-white/5 p-4.5 rounded-2xl flex items-start gap-3.5 shadow-lg relative overflow-hidden group hover:border-blue-500/20"
+            >
+              <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full blur-xl pointer-events-none group-hover:bg-blue-500/10 transition-all" />
+              <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 border border-blue-500/15">
+                <Radio className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">Sincronismo Ultra Rápido</h4>
+                <p className="text-slate-400 text-[11px] leading-relaxed">Transmissão em tempo real sem delay. Os smartphones vibram e giram em sincronicidade contínua.</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ y: -4, scale: 1.01 }}
+              transition={{ duration: 0.2 }}
+              className="bg-[#161920] border border-white/5 p-4.5 rounded-2xl flex items-start gap-3.5 shadow-lg relative overflow-hidden group hover:border-amber-500/20"
+            >
+              <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-full blur-xl pointer-events-none group-hover:bg-amber-500/10 transition-all" />
+              <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-400 border border-amber-500/15">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-white group-hover:text-amber-400 transition-colors">Múltiplos Prêmios & Rodadas</h4>
+                <p className="text-slate-400 text-[11px] leading-relaxed">Gerencie uma fila de prêmios com descrições ricas, resolvendo um após o outro de forma limpa.</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ y: -4, scale: 1.01 }}
+              transition={{ duration: 0.2 }}
+              className="bg-[#161920] border border-white/5 p-4.5 rounded-2xl flex items-start gap-3.5 shadow-lg relative overflow-hidden group hover:border-emerald-500/20"
+            >
+              <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none group-hover:bg-emerald-500/10 transition-all" />
+              <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/15">
+                <Send className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">Acesso QR Code Instantâneo</h4>
+                <p className="text-slate-400 text-[11px] leading-relaxed">Sem downloads pesados ou cadastros. Escaneie na tela do projetor e entre na sala instantaneamente.</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ y: -4, scale: 1.01 }}
+              transition={{ duration: 0.2 }}
+              className="bg-[#161920] border border-white/5 p-4.5 rounded-2xl flex items-start gap-3.5 shadow-lg relative overflow-hidden group hover:border-indigo-500/20"
+            >
+              <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/5 rounded-full blur-xl pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
+              <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/15">
+                <Monitor className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">Suporte PWA Multiplataforma</h4>
+                <p className="text-slate-400 text-[11px] leading-relaxed">Roda de forma idêntica no navegador, aplicativo instalado no Android (APK) ou Windows (EXE).</p>
+              </div>
+            </motion.div>
           </div>
         </div>
 
@@ -322,55 +490,14 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
             )}
           </div>
 
-          {/* Consistent Cross-Platform Logo Visual (Android App == Windows App == Web App) */}
-          <div className="mb-4 bg-white/5 border border-white/5 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-4 justify-around">
-            <div className="flex flex-col items-center text-center">
-              <span className="text-[10px] text-slate-400 font-mono font-bold mb-1 uppercase flex items-center gap-1">
-                <Smartphone className="w-3 h-3 text-emerald-500" /> App Android
-              </span>
-              <div className="p-3 bg-[#0F1115] rounded-2xl border border-white/5 shadow-inner">
-                <VouGanheiLogo size="sm" animate={false} />
-              </div>
-              <span className="text-[9px] text-slate-500 mt-1 font-sans">VouGanhei.apk</span>
-            </div>
-
-            <div className="text-xl text-blue-500/30 font-bold hidden sm:block">＝</div>
-
-            <div className="flex flex-col items-center text-center">
-              <span className="text-[10px] text-slate-400 font-mono font-bold mb-1 uppercase flex items-center gap-1">
-                <Monitor className="w-3 h-3 text-blue-400" /> App Windows
-              </span>
-              <div className="p-3 bg-[#0F1115] rounded-2xl border border-white/5 shadow-inner">
-                <VouGanheiLogo size="sm" animate={false} />
-              </div>
-              <span className="text-[9px] text-slate-500 mt-1 font-sans">VouGanhei.exe</span>
-            </div>
-
-            <div className="text-xl text-blue-500/30 font-bold hidden sm:block">＝</div>
-
-            <div className="flex flex-col items-center text-center">
-              <span className="text-[10px] text-slate-400 font-mono font-bold mb-1 uppercase flex items-center gap-1">
-                <Award className="w-3 h-3 text-amber-500 animate-spin" style={{ animationDuration: "12s" }} /> Versão Web
-              </span>
-              <div className="p-3 bg-[#0F1115] rounded-2xl border border-white/5 shadow-inner">
-                <VouGanheiLogo size="sm" animate={false} />
-              </div>
-              <span className="text-[9px] text-slate-500 mt-1 font-sans">Navegador PWA</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-slate-300 leading-relaxed font-sans font-semibold text-center py-1 border-b border-white/5 mb-3">
-            ✨ Uma única marca unificada! A mesma logo oficial está presente em todas as plataformas!
-          </p>
-
           {isStandalone ? (
-            <p className="text-xs text-slate-400 leading-relaxed font-sans">
+            <p className="text-xs text-slate-400 leading-relaxed font-sans mt-2">
               Você já está jogando na versão instalada do <strong className="text-blue-400 font-bold">VouGanhei!</strong>. Desfrute da tela cheia, sem barras do navegador, com máxima imersão!
             </p>
           ) : (
-            <div className="space-y-3 font-sans">
+            <div className="space-y-3 font-sans mt-2">
               <p className="text-xs text-slate-400 leading-relaxed">
-                Adicione o <strong className="text-blue-400 font-bold">VouGanhei!</strong> na sua tela de início para acompanhar os sorteio em tempo real com animações fluidas e suporte offline.
+                Adicione o <strong className="text-blue-400 font-bold">VouGanhei!</strong> na sua tela de início para acompanhar os sorteios em tempo real com animações fluidas e suporte offline.
               </p>
 
               {isIOS ? (

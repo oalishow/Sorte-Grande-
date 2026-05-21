@@ -83,6 +83,46 @@ html.light [class*="bg-[#12141A]"] {
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05) !important;
 }
 
+/* Override dark gradients to gorgeous clean light gradients */
+html.light [class*="from-[#181B22]"],
+html.light [class*="from-[#181b22]"],
+html.light [class*="from-[#1a1d25]"],
+html.light [class*="from-[#1A1D25]"],
+html.light [class*="from-[#1C202B]"],
+html.light [class*="from-[#1c202b]"] {
+  background-image: linear-gradient(to bottom, #ffffff, #f8fafc) !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light [class*="from-[#111317]"],
+html.light [class*="from-[#111317]"] {
+  background-image: linear-gradient(to bottom, #f1f5f9, #e2e8f0) !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light [class*="from-[#1C1F26]"],
+html.light [class*="from-[#1c1f26]"] {
+  background-image: linear-gradient(to bottom, #ffffff, #fdfbf7) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Ensure notches inside the ticket ticket card blend completely into the background */
+html.light [class*="bg-[#0F1115]"].rounded-full {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Clear card/panel shadows internally in light mode */
+html.light [class*="shadow-[0_25px_60px"] {
+  box-shadow: 0 15px 35px -5px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Outer machines, drawers, or inner panels in DrawAnimator */
+html.light [class*="bg-[#0F1115]"]:not(.rounded-full) {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
 /* Nested secondary background inside cards or lists */
 html.light [class*="bg-[#161920]"] [class*="bg-[#0f1115]"],
 html.light [class*="bg-[#161920]"] [class*="bg-[#0F1115]"],
@@ -101,8 +141,38 @@ html.light [class*="text-[#e2e8f0]"],
 html.light .text-slate-100,
 html.light h1:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-[#FBBF24]"]),
 html.light h2:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]),
-html.light h3:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]) {
+html.light h3:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]),
+html.light h4:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]),
+html.light h5:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]),
+html.light h6:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]) {
   color: #0f172a !important; /* slate-900 */
+}
+
+/* General white text overrides to high contrast unless they are buttons / badges of rich background gradients */
+html.light .text-white:not(button):not([class*="bg-blue"]):not([class*="bg-indigo"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-gradient"]) {
+  color: #0f172a !important;
+}
+
+/* Prevent dark overlay texts from disappearing */
+html.light [class*="bg-rose-500/10"] * {
+  color: #be123c !important; /* rose-700 */
+}
+
+/* Override dark/black/60 badges inside winner presenter container cards */
+html.light [class*="bg-black/"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Override glow effects for the drawing numbers and digits */
+html.light .text-shadow-glow {
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.1) !important;
+  color: #1e293b !important;
+}
+
+html.light .neon-glow {
+  text-shadow: none !important;
+  color: #1d4ed8 !important; /* elegant royal blue for tickets */
 }
 
 /* Avoid turning text dark inside buttons or specific active links where it should stay readable */
@@ -142,14 +212,20 @@ html.light .text-slate-600 {
 html.light .border-white\/5,
 html.light .border-white\/10,
 html.light .border-white\/20,
-html.light .border-white\/25 {
-  border-color: #e2e8f0 !important;
+html.light .border-white\/25,
+html.light .border-dashed {
+  border-color: #cbd5e1 !important;
 }
 
 /* Keep glowing accents attractive but visible */
 html.light .glow-pulse {
   background-color: rgba(59, 130, 246, 0.04) !important;
   transform: scale(1.05);
+}
+
+/* Active particle and scanline reduction in light layout */
+html.light [class*="opacity-70"] {
+  opacity: 0.25 !important;
 }
 
 /* Overrides for specific labels and dynamic high-contrast elements */
@@ -162,8 +238,20 @@ html.light .text-amber-400 {
 html.light .text-blue-400 {
   color: #1d4ed8 !important;
 }
+html.light .bg-blue-500\/10 {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+  color: #1d4ed8 !important;
+}
 html.light .text-indigo-400 {
   color: #4338ca !important;
+}
+
+html.light .text-emerald-400 {
+  color: #059669 !important; /* emerald-600 */
+}
+html.light .bg-emerald-500\/10 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: #059669 !important;
 }
 
 /* Active buttons in navigation tabs */

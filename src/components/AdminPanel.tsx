@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Prize, Participant } from "../types";
-import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings } from "lucide-react";
+import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
@@ -47,6 +47,7 @@ export default function AdminPanel({
     classicMax?: number;
     classicNoRepeat?: boolean;
     clearHistory?: boolean;
+    isOpenRoom?: boolean;
   }) => {
     try {
       await fetch(`/api/rooms/${room.id}/settings`, {
@@ -220,30 +221,59 @@ export default function AdminPanel({
           )}
         </AnimatePresence>
 
-        {/* Mode Selector Tab Container */}
-        <div className="flex bg-[#161920]/80 p-1 rounded-xl border border-white/5 w-fit mb-6 select-none shadow-md">
-          <button
-            onClick={() => handleUpdateSettings({ drawMode: "qrcode" })}
-            className={`px-4 py-2 rounded-lg text-xs font-bold font-sans tracking-wide transition-all cursor-pointer flex items-center gap-2 ${
-              room.drawMode !== "classic"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/15"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            Sorteio Virtual (QR Code)
-          </button>
-          <button
-            onClick={() => handleUpdateSettings({ drawMode: "classic" })}
-            className={`px-4 py-2 rounded-lg text-xs font-bold font-sans tracking-wide transition-all cursor-pointer flex items-center gap-2 ${
-              room.drawMode === "classic"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/15"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Ticket className="w-3.5 h-3.5" />
-            Sorteio Clássico (Faixa de Números)
-          </button>
+        {/* Mode & Room Privacy Selector Container */}
+        <div className="flex flex-wrap gap-4 items-center mb-6 select-none">
+          <div className="flex bg-[#161920]/80 p-1 rounded-xl border border-white/5 w-fit shadow-md">
+            <button
+              onClick={() => handleUpdateSettings({ drawMode: "qrcode" })}
+              className={`px-4 py-2 rounded-lg text-xs font-bold font-sans tracking-wide transition-all cursor-pointer flex items-center gap-2 ${
+                room.drawMode !== "classic"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/15 font-bold"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Sorteio Virtual (QR Code)
+            </button>
+            <button
+              onClick={() => handleUpdateSettings({ drawMode: "classic" })}
+              className={`px-4 py-2 rounded-lg text-xs font-bold font-sans tracking-wide transition-all cursor-pointer flex items-center gap-2 ${
+                room.drawMode === "classic"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/15 font-bold"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Ticket className="w-3.5 h-3.5" />
+              Sorteio Clássico (Faixa de Números)
+            </button>
+          </div>
+
+          <div className="flex bg-[#161920]/80 p-1 rounded-xl border border-white/5 w-fit shadow-md">
+            <button
+              onClick={() => handleUpdateSettings({ isOpenRoom: false })}
+              className={`px-4 py-2 rounded-lg text-xs font-bold font-sans tracking-wide transition-all cursor-pointer flex items-center gap-2 ${
+                !room.isOpenRoom
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/15 font-bold"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+              title="Apenas usuários com o código direto de 6 dígitos podem entrar."
+            >
+              <Shield className="w-3.5 h-3.5 text-blue-400" />
+              Sala Fechada
+            </button>
+            <button
+              onClick={() => handleUpdateSettings({ isOpenRoom: true })}
+              className={`px-4 py-2 rounded-lg text-xs font-bold font-sans tracking-wide transition-all cursor-pointer flex items-center gap-2 ${
+                room.isOpenRoom
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/15 font-bold animate-[pulse_3s_infinite]"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+              title="A sala ficará visível e listada na tela de todos os celulares conectados para entrada instantânea!"
+            >
+              <Radio className="w-3.5 h-3.5 text-emerald-400" />
+              Sala Aberta (Pública)
+            </button>
+          </div>
         </div>
 
         {/* Dashboard Bento grids - shown always or scaled */}
