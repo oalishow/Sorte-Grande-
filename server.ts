@@ -49,9 +49,7 @@ loadDB();
 
 // Setup CORS to allow cross-origin requests from netlify and localhost
 app.use(cors({
-  origin: ['https://vouganhei.netlify.app', 'http://localhost:5173', 'http://localhost:3000', '*', /.*\.run\.app/],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: '*'
 }));
 
 app.use(express.json());
