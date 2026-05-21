@@ -4,6 +4,7 @@ import { Room, Prize, Participant } from "../types";
 import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
+import CustomModal from "./CustomModal";
 
 interface AdminPanelProps {
   room: Room;
@@ -27,6 +28,9 @@ export default function AdminPanel({
   const [newPrizeName, setNewPrizeName] = useState("");
   const [copied, setCopied] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+
+  // Custom Confirmation Modal details
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   // Classic mode states & updates handler
   const [minInput, setMinInput] = useState(String(room.classicMin ?? 1));
@@ -303,9 +307,7 @@ export default function AdminPanel({
               <div className="pt-5 border-t border-white/5 mt-6">
                 <button
                   onClick={() => {
-                    if (confirm("Deseja apagar o histórico de números sorteados e prêmios entregues nesta sala para reiniciar?")) {
-                      handleUpdateSettings({ clearHistory: true });
-                    }
+                    setConfirmResetOpen(true);
                   }}
                   className="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-450 font-semibold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center uppercase font-mono tracking-wider border border-rose-500/20"
                 >
@@ -631,6 +633,20 @@ export default function AdminPanel({
           </div>
         </div>
       </footer>
+
+      {/* CUSTOM CONFIRMATION MODAL TO SUPPRESS BROWSER POPUPS */}
+      <CustomModal
+        isOpen={confirmResetOpen}
+        onClose={() => setConfirmResetOpen(false)}
+        onConfirm={() => {
+          handleUpdateSettings({ clearHistory: true });
+        }}
+        title="Reiniciar Sorteios?"
+        message="Isto apagará permanentemente todo o histórico de números sorteados nesta rodada clássica e reativará os prêmios anteriores. Tem certeza que deseja zerar a sala?"
+        type="confirm"
+        confirmText="Sim, Reiniciar"
+        cancelText="Voltar"
+      />
     </div>
   );
 }

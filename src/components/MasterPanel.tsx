@@ -13,6 +13,7 @@ import {
   RefreshCw 
 } from "lucide-react";
 import { Room } from "../types";
+import CustomModal from "./CustomModal";
 
 interface MasterPanelProps {
   onBack: () => void;
@@ -26,6 +27,10 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [testRoomName, setTestRoomName] = useState("");
+
+  // Custom Modal States
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<string | null>(null);
 
   // Check session storage if already authenticated in this browser tab
   useEffect(() => {
@@ -104,11 +109,12 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     }
   };
 
-  const handleDeleteRoom = async (roomId: string) => {
-    if (!confirm(`Tem certeza que deseja excluir permanentemente a sala #${roomId}?`)) {
-      return;
-    }
+  const handleDeleteRoom = (roomId: string) => {
+    setPendingDeleteRoomId(roomId);
+    setDeleteConfirmOpen(true);
+  };
 
+  const executeDeleteRoom = async (roomId: string) => {
     setIsLoading(true);
     try {
       const res = await fetch("/api/admin/rooms/delete", {
@@ -128,6 +134,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
       setErrorMsg(err.message);
     } finally {
       setIsLoading(false);
+      setPendingDeleteRoomId(null);
     }
   };
 
@@ -431,6 +438,25 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
 
         </div>
       </div>
+
+      {/* Delete confirmation custom modal */}
+      <CustomModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setPendingDeleteRoomId(null);
+        }}
+        onConfirm={() => {
+          if (pendingDeleteRoomId) {
+            executeDeleteRoom(pendingDeleteRoomId);
+          }
+        }}
+        title="Excluir Sala?"
+        message={`Esta ação é absolutamente irreversível. Todos os participantes, prêmios, bilhetes e estatísticas da sala #${pendingDeleteRoomId} serão apagados do banco de dados para sempre.\n\nTem certeza que deseja continuar com a exclusão?`}
+        type="confirm"
+        confirmText="Sim, Excluir"
+        cancelText="Voltar"
+      />
     </div>
   );
 }

@@ -56,48 +56,80 @@
    ========================================================= */
 html.light,
 html.light body,
-html.light .bg-\[\#0F1115\],
-html.light .bg-\[\\#0F1115\] {
+html.light [class*="bg-[#0f1115]"],
+html.light [class*="bg-[#0F1115]"],
+html.light [class*="bg-[#111317]"],
+html.light [class*="bg-[#0A0B0E]"],
+html.light [class*="bg-[#0e1014]"],
+html.light [class*="bg-[#0E1014]"] {
   background-color: #f8fafc !important; /* slate-50 */
   color: #1e293b !important; /* slate-800 */
 }
 
-/* Cards & panels bg-[#161920] */
-html.light .bg-\[\#161920\],
-html.light .bg-\[\\#161920\],
-html.light .bg-\[\#161920\]\/60,
-html.light .bg-\[\\#161920\]\/60,
-html.light .bg-\[\#161920\]\/85,
-html.light .bg-\[\\#161920\]\/85,
-html.light .bg-\[\#161920\]\/80,
-html.light .bg-\[\\#161920\]\/80 {
+/* Secondary bg-[#161920] or similar card/panel backgrounds */
+html.light [class*="bg-[#161920]"],
+html.light [class*="bg-[#1b1d23]"],
+html.light [class*="bg-[#1B1D23]"],
+html.light [class*="bg-[#1a1d25]"],
+html.light [class*="bg-[#1A1D25]"],
+html.light [class*="bg-[#181b22]"],
+html.light [class*="bg-[#181B22]"],
+html.light [class*="bg-[#1c1f26]"],
+html.light [class*="bg-[#1C1F26]"],
+html.light [class*="bg-[#12141a]"],
+html.light [class*="bg-[#12141A]"] {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05) !important;
 }
 
-/* Secondary bg-[#0F1115] cards inside */
-html.light .bg-\[\#0F1115\],
-html.light .bg-\[\\#0F1115\],
-html.light .bg-\[\#0F1115\]\/60,
-html.light .bg-\[\\#0F1115\]\/60,
-html.light .bg-\[\#0F1115\]\/50,
-html.light .bg-\[\\#0F1115\]\/50 {
+/* Nested secondary background inside cards or lists */
+html.light [class*="bg-[#161920]"] [class*="bg-[#0f1115]"],
+html.light [class*="bg-[#161920]"] [class*="bg-[#0F1115]"],
+html.light [class*="bg-[#161920]"] [class*="bg-[#111317]"],
+html.light [class*="bg-[#1a1d25]"] [class*="bg-[#0f1115]"],
+html.light [class*="bg-[#1a1d25]"] [class*="bg-[#0F1115]"],
+html.light [class*="bg-[#161920]"] [class*="bg-[#1a1d25]"] {
   background-color: #f1f5f9 !important; /* slate-100 */
   border-color: #e2e8f0 !important;
 }
 
-/* Neutral text colors */
+/* Overrides for text colors to ensure clear contrast */
 html.light .text-slate-200,
-html.light .text-slate-300,
-html.light .text-white,
-html.light .text-\[\#E2E8F0\],
-html.light .text-\[\\#E2E8F0\] {
+html.light [class*="text-[#E2E8F0]"],
+html.light [class*="text-[#e2e8f0]"],
+html.light .text-slate-100,
+html.light h1:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]):not([class*="text-[#FBBF24]"]),
+html.light h2:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]),
+html.light h3:not([class*="from-"]):not([class*="text-amber-"]):not([class*="text-blue-"]):not([class*="text-emerald-"]) {
   color: #0f172a !important; /* slate-900 */
 }
 
+/* Avoid turning text dark inside buttons or specific active links where it should stay readable */
+html.light [class*="bg-gradient-to-"] .text-white,
+html.light [class*="bg-gradient-to-"] [class*="text-[#e2e8f0]"],
+html.light [class*="bg-gradient-to-"] [class*="text-[#E2E8F0]"],
+html.light [class*="bg-blue-"] .text-white,
+html.light [class*="bg-indigo-"] .text-white,
+html.light [class*="bg-emerald-"] .text-white,
+html.light [class*="bg-rose-"] .text-white,
+html.light button[class*="bg-blue"] .text-white,
+html.light button[class*="bg-indigo"] .text-white,
+html.light button[class*="bg-emerald"] .text-white,
+html.light button[class*="bg-rose"] .text-white,
+html.light button[class*="bg-blue-"] *,
+html.light button[class*="bg-indigo-"] * {
+  color: #ffffff !important;
+}
+
+html.light .text-slate-300 {
+  color: #1e293b !important; /* slate-800 */
+}
+
 html.light .text-slate-400,
-html.light .text-slate-500 {
+html.light .text-slate-500,
+html.light [class*="text-[#94A3B8]"],
+html.light [class*="text-[#94a3b8]"] {
   color: #475569 !important; /* slate-600 */
 }
 
@@ -106,40 +138,51 @@ html.light .text-slate-600 {
   color: #64748b !important; /* slate-500 */
 }
 
-/* Custom glow pulses during light mode */
+/* Overrides for borders and rings */
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/20,
+html.light .border-white\/25 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Keep glowing accents attractive but visible */
 html.light .glow-pulse {
   background-color: rgba(59, 130, 246, 0.04) !important;
   transform: scale(1.05);
 }
 
-/* Overrides for borders */
-html.light .border-white\/5,
-html.light .border-white\/10 {
-  border-color: #e2e8f0 !important;
-}
-
-/* Overrides for headings or specific badges */
+/* Overrides for specific labels and dynamic high-contrast elements */
 html.light .text-amber-500 {
-  color: #d97706 !important; /* darker amber for contrast */
+  color: #d97706 !important;
 }
 html.light .text-amber-400 {
-  color: #b45309 !important; /* darker amber */
+  color: #b45309 !important;
 }
 html.light .text-blue-400 {
-  color: #2563eb !important; /* high-contrast royal blue */
+  color: #1d4ed8 !important;
 }
 html.light .text-indigo-400 {
-  color: #4f46e5 !important;
+  color: #4338ca !important;
 }
 
-/* Clean up input backgrounds in Light mode */
+/* Active buttons in navigation tabs */
+html.light [class*="bg-[#161920]"] button[class*="bg-[#0F1115]"],
+html.light [class*="bg-[#161920]"] button[class*="bg-[#0f1115]"] {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Clean up input text fields style overrides */
 html.light input[type="text"] {
   background-color: #ffffff !important;
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
 html.light input[type="text"]:focus {
-  border-color: #3b82f6 !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
 }
 
 html.light ::-webkit-scrollbar-track {

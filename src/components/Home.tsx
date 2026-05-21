@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus } from "lucide-react";
+import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus, Monitor } from "lucide-react";
 import VouGanheiLogo from "./VouGanheiLogo";
+import CustomModal from "./CustomModal";
 
 interface HomeProps {
   onCreateRoom: (roomName: string) => void;
@@ -15,6 +16,14 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
   const [roomCode, setRoomCode] = useState("");
   const [activeTab, setActiveTab] = useState<"create" | "join">("create");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Custom Modal States
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    message: string;
+    type: "info" | "confirm" | "success";
+  }>({ title: "", message: "", type: "info" });
 
   // PWA Prompt & Standalone States
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -42,7 +51,12 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      alert("Para instalar nas configurações do seu navegador, procure a opção 'Instalar' ou 'Adicionar à tela de início'.");
+      setModalConfig({
+        title: "Instale em Qualquer Dispositivo",
+        message: "Para instalar nas configurações do seu navegador, procure a opção 'Instalar' ou 'Adicionar à tela de início' nas configurações (geralmente nos três pontinhos no canto do navegador).\n\nO aplicativo roda de forma rápida e idêntica em computadores Windows e celulares Android!",
+        type: "info",
+      });
+      setModalOpen(true);
       return;
     }
     deferredPrompt.prompt();
@@ -51,6 +65,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
       setDeferredPrompt(null);
     }
   };
+
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -286,7 +301,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.48 }}
-          className="w-full mt-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/5 to-transparent backdrop-blur-md rounded-2xl p-5 border border-blue-500/20 shadow-xl text-left relative overflow-hidden"
+          className="w-full mt-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/5 to-transparent backdrop-blur-md rounded-2xl p-5 border border-blue-500/20 shadow-xl text-left relative overflow-hidden animate-[pulse_6s_infinite]"
         >
           {/* subtle glow border indicator */}
           <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-blue-500 to-indigo-600" />
@@ -294,7 +309,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           <div className="flex items-center gap-2 mb-3">
             <Smartphone className="w-5 h-5 text-blue-400 animate-bounce" />
             <h3 className="font-display text-sm font-extrabold text-white">
-              Sorteios na sua Tela Inicial
+              Sorteios na sua Tela Inicial (Android & Windows)
             </h3>
             {isStandalone ? (
               <span className="ml-auto text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
@@ -306,6 +321,47 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
               </span>
             )}
           </div>
+
+          {/* Consistent Cross-Platform Logo Visual (Android App == Windows App == Web App) */}
+          <div className="mb-4 bg-white/5 border border-white/5 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-4 justify-around">
+            <div className="flex flex-col items-center text-center">
+              <span className="text-[10px] text-slate-400 font-mono font-bold mb-1 uppercase flex items-center gap-1">
+                <Smartphone className="w-3 h-3 text-emerald-500" /> App Android
+              </span>
+              <div className="p-3 bg-[#0F1115] rounded-2xl border border-white/5 shadow-inner">
+                <VouGanheiLogo size="sm" animate={false} />
+              </div>
+              <span className="text-[9px] text-slate-500 mt-1 font-sans">VouGanhei.apk</span>
+            </div>
+
+            <div className="text-xl text-blue-500/30 font-bold hidden sm:block">＝</div>
+
+            <div className="flex flex-col items-center text-center">
+              <span className="text-[10px] text-slate-400 font-mono font-bold mb-1 uppercase flex items-center gap-1">
+                <Monitor className="w-3 h-3 text-blue-400" /> App Windows
+              </span>
+              <div className="p-3 bg-[#0F1115] rounded-2xl border border-white/5 shadow-inner">
+                <VouGanheiLogo size="sm" animate={false} />
+              </div>
+              <span className="text-[9px] text-slate-500 mt-1 font-sans">VouGanhei.exe</span>
+            </div>
+
+            <div className="text-xl text-blue-500/30 font-bold hidden sm:block">＝</div>
+
+            <div className="flex flex-col items-center text-center">
+              <span className="text-[10px] text-slate-400 font-mono font-bold mb-1 uppercase flex items-center gap-1">
+                <Award className="w-3 h-3 text-amber-500 animate-spin" style={{ animationDuration: "12s" }} /> Versão Web
+              </span>
+              <div className="p-3 bg-[#0F1115] rounded-2xl border border-white/5 shadow-inner">
+                <VouGanheiLogo size="sm" animate={false} />
+              </div>
+              <span className="text-[9px] text-slate-500 mt-1 font-sans">Navegador PWA</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-300 leading-relaxed font-sans font-semibold text-center py-1 border-b border-white/5 mb-3">
+            ✨ Uma única marca unificada! A mesma logo oficial está presente em todas as plataformas!
+          </p>
 
           {isStandalone ? (
             <p className="text-xs text-slate-400 leading-relaxed font-sans">
@@ -378,6 +434,15 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           </div>
         </div>
       </div>
+
+      {/* Reusable elegant modal for custom browser dialogue suppression */}
+      <CustomModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+      />
     </div>
   );
 }
