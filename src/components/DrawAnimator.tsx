@@ -12,6 +12,7 @@ interface DrawAnimatorProps {
   onResetDrawState?: () => void;
   duration?: number; // custom spin duration in milliseconds
   onRedraw?: () => void; // custom callback to redraw/re-roll a new winner
+  drawingStartedAt?: number | null; // sync standard time from the administrator
 }
 
 // Custom rich active particle interface
@@ -37,6 +38,7 @@ export default function DrawAnimator({
   onResetDrawState,
   duration = 6000,
   onRedraw,
+  drawingStartedAt,
 }: DrawAnimatorProps) {
   const [digits, setDigits] = useState<string[]>(["?", "?", "?"]);
   const [stage, setStage] = useState<"spinning" | "revealed">("spinning");
@@ -59,28 +61,45 @@ export default function DrawAnimator({
     setCountdownActive(true);
     setCountdown(3);
 
-    // Initial countdown tick
-    audioService.playCountdownTick();
+    const now = Date.now();
+    let delay0 = 0;
+    let delay1 = 600;
+    let delay2 = 1200;
+    let delay3 = 1800;
+    let delay4 = 2400;
+
+    if (drawingStartedAt) {
+      const elapsedSinceStart = now - drawingStartedAt;
+      delay0 = Math.max(0, 0 - elapsedSinceStart);
+      delay1 = Math.max(0, 600 - elapsedSinceStart);
+      delay2 = Math.max(0, 1200 - elapsedSinceStart);
+      delay3 = Math.max(0, 1800 - elapsedSinceStart);
+      delay4 = Math.max(0, 2400 - elapsedSinceStart);
+    }
+
+    if (delay0 === 0 && (!drawingStartedAt || (now - drawingStartedAt) < 600)) {
+       audioService.playCountdownTick();
+    }
 
     const t1 = setTimeout(() => {
       setCountdown(2);
       audioService.playCountdownTick();
-    }, 600);
+    }, delay1);
 
     const t2 = setTimeout(() => {
       setCountdown(1);
       audioService.playCountdownTick();
-    }, 1200);
+    }, delay2);
 
     const t3 = setTimeout(() => {
       setCountdown("COMEÇOU! 🎲");
       audioService.playCountdownStart();
-    }, 1800);
+    }, delay3);
 
     const t4 = setTimeout(() => {
       setCountdownActive(false);
       setCountdown(null);
-    }, 2400);
+    }, delay4);
 
     return () => {
       clearTimeout(t1);
@@ -88,13 +107,23 @@ export default function DrawAnimator({
       clearTimeout(t3);
       clearTimeout(t4);
     };
-  }, [winningNumber]);
+  }, [winningNumber, drawingStartedAt]);
 
   useEffect(() => {
     if (countdownActive) return;
 
     let animId: any;
-    const start = Date.now();
+    
+    // ---------------------------------------------------------------------------------
+    // TIME SYNCRONIZATION LOGIC: 
+    // The user requested that the participant finishes at EXACTLY the same time as the 
+    // administrator, using the administrator's time as the standard. 
+    // By using the 'drawingStartedAt' timestamp (recorded when the admin triggered the draw),
+    // we calculate elapsed time based on that absolute point, ensuring perfect synchronization
+    // across all connected devices regardless of when they received the Firebase update.
+    // ---------------------------------------------------------------------------------
+    const localStart = Date.now();
+    
     const animDuration = duration;
     const playedStop = [false, false, false];
     
@@ -110,7 +139,18 @@ export default function DrawAnimator({
 
     const runAnimation = () => {
       const nowMs = Date.now();
-      const elapsed = nowMs - start;
+      
+      // Calculate elapsed time from the exact moment the administrator triggered it (+2400ms countdown duration)
+      // If none provided, fallback to local mount start time.
+      let elapsed = 0;
+      if (drawingStartedAt) {
+          elapsed = nowMs - (drawingStartedAt + 2400);
+      } else {
+          elapsed = nowMs - localStart;
+      }
+      
+      // Clamp elapsed time so it doesn't break if devices are heavily out of sync
+      elapsed = Math.max(0, elapsed);
 
       setDigits((prevDigits) => {
         const nextDigits = [...prevDigits];

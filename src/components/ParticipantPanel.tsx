@@ -201,6 +201,7 @@ export default function ParticipantPanel({
                     winnerName={room.currentWinner.name}
                     prizeName={activePrize.name}
                     duration={drawDuration}
+                    drawingStartedAt={room.drawingStartedAt}
                     onComplete={() => setDrawFinished(true)}
                   />
 

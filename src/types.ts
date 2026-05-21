@@ -45,6 +45,8 @@ export interface Room {
   messages?: ChatMessage[];
   mutedUserIds?: string[];
   typingUsers?: Record<string, { name: string; timestamp: number }>;
+  countdownEndsAt?: number | null;
+  countdownPrizeId?: string | null;
 }
 
 export interface ChatMessage {

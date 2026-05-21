@@ -14,6 +14,7 @@ interface AdminPanelProps {
   onAddPrize: (prizeName: string) => Promise<void>;
   onRemovePrize: (prizeId: string) => Promise<void>;
   onDrawPrize: (prizeId: string) => Promise<void>;
+  onStartCountdown?: (prizeId: string, durationMs: number) => Promise<void>;
   onResetDrawState: () => Promise<void>;
   onLeaveRoom: () => void;
   appUrl: string;
@@ -25,6 +26,7 @@ export default function AdminPanel({
   onAddPrize,
   onRemovePrize,
   onDrawPrize,
+  onStartCountdown,
   onResetDrawState,
   onLeaveRoom,
   appUrl,
@@ -488,6 +490,7 @@ export default function AdminPanel({
                 isAdmin={true}
                 onResetDrawState={handleNextDrawRound}
                 duration={drawDuration}
+                drawingStartedAt={room.drawingStartedAt}
                 onRedraw={() => onDrawPrize(activePrize.id)}
               />
             </motion.div>
@@ -865,17 +868,43 @@ export default function AdminPanel({
 
             {/* Sorteio Rápido de Números (sem prêmio fixo) no modo clássico */}
             {room.drawMode === "classic" && (
-              <button
-                onClick={() => {
-                  onDrawPrize("quick_draw");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                disabled={room.status === "drawing"}
-                className="mb-4 w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold tracking-wider rounded-xl shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 uppercase shrink-0"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Sorteio Rápido 🎲
-              </button>
+              <div className="mb-4 flex flex-col gap-1.5 w-full shrink-0">
+                <button
+                  onClick={() => {
+                    onDrawPrize("quick_draw");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  disabled={room.status === "drawing"}
+                  className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold tracking-wider rounded-xl shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 uppercase"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Sorteio Rápido 🎲
+                </button>
+                <div className="flex gap-1.5 w-full">
+                  <button
+                    onClick={() => {
+                      if (onStartCountdown) onStartCountdown("quick_draw", 5000);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    disabled={room.status === "drawing"}
+                    className="flex-1 py-1.5 bg-[#1F2937] text-amber-300 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-amber-500/10 hover:bg-[#374151] hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                    title="Iniciar contagem de 5 segundos antes do sorteio rápido"
+                  >
+                    ⏱️ 5s
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (onStartCountdown) onStartCountdown("quick_draw", 10000);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    disabled={room.status === "drawing"}
+                    className="flex-1 py-1.5 bg-[#1F2937] text-amber-300 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-amber-500/10 hover:bg-[#374151] hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                    title="Iniciar contagem de 10 segundos antes do sorteio rápido"
+                  >
+                    ⏱️ 10s
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Quick Add Prize form */}
@@ -986,17 +1015,44 @@ export default function AdminPanel({
                                 </div>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => {
-                                  onDrawPrize(p.id);
-                                  window.scrollTo({ top: 0, behavior: "smooth" });
-                                }}
-                                disabled={cannotDraw || noParticipants}
-                                className="w-full py-1.5 bg-[#2563EB] text-white text-xs font-bold tracking-wider rounded-lg shadow-md transition-all hover:bg-[#1D4ED8] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 uppercase outline-none"
-                              >
-                                <Sparkles className="w-3.5 h-3.5" />
-                                {room.status === "drawing" && room.activePrizeId === p.id ? "Sorteando..." : "Sortear Prêmio 🎲"}
-                              </button>
+                              <div className="flex flex-col gap-1.5 w-full">
+                                <button
+                                  onClick={() => {
+                                    onDrawPrize(p.id);
+                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                  }}
+                                  disabled={cannotDraw || noParticipants}
+                                  className="w-full py-1.5 bg-[#2563EB] text-white text-xs font-bold tracking-wider rounded-lg shadow-md transition-all hover:bg-[#1D4ED8] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 uppercase outline-none"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  {room.status === "drawing" && room.activePrizeId === p.id ? "Sorteando..." : "Sortear 🎲"}
+                                </button>
+                                
+                                <div className="flex gap-1.5 w-full">
+                                  <button
+                                    onClick={() => {
+                                      if (onStartCountdown) onStartCountdown(p.id, 5000);
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    disabled={cannotDraw || noParticipants}
+                                    className="flex-1 py-1.5 bg-[#1F2937] text-slate-300 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-white/10 hover:bg-[#374151] hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                                    title="Iniciar contagem de 5 segundos antes do sorteio"
+                                  >
+                                    ⏱️ 5s
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (onStartCountdown) onStartCountdown(p.id, 10000);
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    disabled={cannotDraw || noParticipants}
+                                    className="flex-1 py-1.5 bg-[#1F2937] text-slate-300 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-white/10 hover:bg-[#374151] hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                                    title="Iniciar contagem de 10 segundos antes do sorteio"
+                                  >
+                                    ⏱️ 10s
+                                  </button>
+                                </div>
+                              </div>
                             )}
                       </motion.div>
                     );

@@ -12,8 +12,11 @@ import {
   firebaseRemovePrize, 
   firebaseDrawPrize, 
   firebaseResetDraw, 
-  firebaseSubscribeRoom 
+  firebaseSubscribeRoom,
+  firebaseStartCountdown,
+  firebaseClearCountdown
 } from "./lib/firebase";
+import CountdownAnimator from "./components/CountdownAnimator";
 import { RefreshCw, ArrowLeft, AlertCircle, Sun, Moon, Wifi, WifiOff } from "lucide-react";
 
 export default function App() {
@@ -226,6 +229,22 @@ export default function App() {
     }
   };
 
+  const handleStartCountdown = async (prizeId: string, durationMs: number) => {
+    try {
+      await firebaseStartCountdown(roomId, durationMs, prizeId);
+    } catch (err) {
+      console.error("Erro ao iniciar contagem regressiva", err);
+    }
+  };
+
+  const handleClearCountdown = async () => {
+    try {
+      await firebaseClearCountdown(roomId);
+    } catch (err) {
+      console.error("Erro ao limpar contagem regressiva", err);
+    }
+  };
+
   const handleResetDrawState = async () => {
     try {
       await firebaseResetDraw(roomId);
@@ -278,6 +297,7 @@ export default function App() {
             onAddPrize={handleAddPrize}
             onRemovePrize={handleRemovePrize}
             onDrawPrize={handleDrawPrize}
+            onStartCountdown={handleStartCountdown}
             onResetDrawState={handleResetDrawState}
             onLeaveRoom={handleLeaveRoom}
             appUrl={appUrl}
@@ -355,6 +375,25 @@ export default function App() {
       </div>
 
       {renderContent()}
+      
+      {/* Global Countdown Animator */}
+      {roomState && roomState.countdownEndsAt && roomState.countdownEndsAt > Date.now() && (
+        <CountdownAnimator
+          countdownEndsAt={roomState.countdownEndsAt}
+          isAdmin={role === "admin"}
+          onFinish={() => {
+            if (roomState.countdownPrizeId && role === "admin") {
+              handleDrawPrize(roomState.countdownPrizeId);
+              handleClearCountdown();
+            }
+          }}
+          onCancel={() => {
+            if (role === "admin") {
+              handleClearCountdown();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

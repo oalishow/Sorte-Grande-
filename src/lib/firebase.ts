@@ -234,6 +234,40 @@ export async function firebaseUpdateSettings(roomId: string, updates: Partial<Ro
   }
 }
 
+export async function firebaseStartCountdown(roomId: string, durationMs: number, prizeId: string): Promise<void> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error("Sala não encontrada.");
+    
+    await updateDoc(docRef, {
+      countdownEndsAt: Date.now() + durationMs,
+      countdownPrizeId: prizeId,
+    });
+  } catch (error) {
+    console.error("Erro ao iniciar contagem regressiva:", error);
+    throw error;
+  }
+}
+
+export async function firebaseClearCountdown(roomId: string): Promise<void> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error("Sala não encontrada.");
+    
+    await updateDoc(docRef, {
+      countdownEndsAt: null,
+      countdownPrizeId: null,
+    });
+  } catch (error) {
+    console.error("Erro ao cancelar contagem regressiva:", error);
+    throw error;
+  }
+}
+
 export async function firebaseDrawPrize(roomId: string, prizeId: string): Promise<Room> {
   const upperCode = roomId.trim().toUpperCase();
   try {
