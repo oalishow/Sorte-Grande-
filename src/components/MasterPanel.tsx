@@ -19,8 +19,8 @@ import CustomModal from "./CustomModal";
 import { 
   firebaseCreateRoom,
   firebaseAddPrize,
-  firebaseGetRoomsList, 
-  firebaseGetTrashedRooms, 
+  firebaseSubscribeAllRooms,
+  firebaseSubscribeTrashedRooms,
   firebaseTrashRoom, 
   firebaseRestoreRoom, 
   firebaseDeleteRoomPermanently, 
@@ -54,41 +54,27 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     const savedPass = sessionStorage.getItem("master_password");
     if (savedPass === "7777") {
       setPassword("7777");
-      fetchRoomsList("7777");
+      setIsUnlocked(true);
     }
   }, []);
 
-  const fetchTrashedRoomsList = async (pass: string) => {
-    try {
-      if (pass !== "7777") return;
-      const list = await firebaseGetTrashedRooms();
-      setTrashedRooms(list);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // Real-time synchronization
+  useEffect(() => {
+    if (!isUnlocked || password !== "7777") return;
 
-  const fetchRoomsList = async (pass: string) => {
-    setIsLoading(true);
-    setErrorMsg("");
-    try {
-      if (pass !== "7777") {
-        throw new Error("Acesso negado.");
-      }
-
-      const list = await firebaseGetRoomsList();
+    const unsubRooms = firebaseSubscribeAllRooms((list) => {
       setRooms(list);
-      setIsUnlocked(true);
-      sessionStorage.setItem("master_password", pass);
+    });
 
-      await fetchTrashedRoomsList(pass);
-    } catch (err: any) {
-      setErrorMsg(err.message || "Senha incorreta ou erro no servidor.");
-      setIsUnlocked(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const unsubTrash = firebaseSubscribeTrashedRooms((list) => {
+      setTrashedRooms(list);
+    });
+
+    return () => {
+      unsubRooms && unsubRooms();
+      unsubTrash && unsubTrash();
+    };
+  }, [isUnlocked, password]);
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +82,15 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
       setErrorMsg("Insira a senha mestre.");
       return;
     }
-    fetchRoomsList(password);
+    
+    if (password === "7777") {
+      setIsUnlocked(true);
+      sessionStorage.setItem("master_password", "7777");
+      setErrorMsg("");
+    } else {
+      setErrorMsg("Senha incorreta.");
+      setIsUnlocked(false);
+    }
   };
 
   const handleCreateTestRoom = async () => {
@@ -129,7 +123,6 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     try {
       await firebaseTrashRoom(roomId);
-      await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -142,7 +135,6 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     try {
       await firebaseRestoreRoom(roomId);
-      await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -159,7 +151,6 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     try {
       await firebaseDeleteRoomPermanently(roomId);
-      await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -174,7 +165,6 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setIsLoading(true);
     try {
       await firebaseEmptyTrash();
-      await fetchRoomsList("7777");
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -286,10 +276,10 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => fetchRoomsList("7777")}
+              onClick={() => {}}
               disabled={isLoading}
               className="p-2.5 bg-[#161920] border border-white/5 hover:bg-[#1a1d25] rounded-xl text-slate-450 transition-all cursor-pointer"
-              title="Atualizar lista"
+              title="Sincronizado em tempo real"
             >
               <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin text-blue-500" : ""}`} />
             </button>

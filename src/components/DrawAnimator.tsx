@@ -65,22 +65,22 @@ export default function DrawAnimator({
     const t1 = setTimeout(() => {
       setCountdown(2);
       audioService.playCountdownTick();
-    }, 1000);
+    }, 600);
 
     const t2 = setTimeout(() => {
       setCountdown(1);
       audioService.playCountdownTick();
-    }, 2000);
+    }, 1200);
 
     const t3 = setTimeout(() => {
       setCountdown("COMEÇOU! 🎲");
       audioService.playCountdownStart();
-    }, 3000);
+    }, 1800);
 
     const t4 = setTimeout(() => {
       setCountdownActive(false);
       setCountdown(null);
-    }, 4000);
+    }, 2400);
 
     return () => {
       clearTimeout(t1);

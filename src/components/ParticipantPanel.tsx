@@ -79,8 +79,8 @@ export default function ParticipantPanel({
     : room.prizes.find((p) => p.id === room.activePrizeId);
   const isMeWinner = room.currentWinner && room.currentWinner.id === playerId;
   const isLastPrize = room.prizes.length > 0 && room.prizes.every((p) => p.winner !== null);
-  // Adjusted to ~3-4 seconds as requested for the spin ("uns 3 segundos")
-  const drawDuration = isLastPrize ? 5500 : 3800;
+  // Adjusted to exactly 3 seconds as requested for the spin ("uns 3 segundos")
+  const drawDuration = 3200;
 
   return (
     <div className="min-h-screen bg-[#0F1115] text-[#E2E8F0] flex flex-col p-4 md:p-6 font-sans relative overflow-x-hidden">
