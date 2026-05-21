@@ -58,6 +58,23 @@ export default function App() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
+  // Manual update / refresh helper
+  const handleForceRefresh = () => {
+    setLoading(true);
+    // If it's a PWA, we can also try to update service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.update();
+        }
+      });
+    }
+    // Simple window reload is the most reliable "update" for the user
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
+
   // Dev Server URL - AI Studio proxies port 3000 to this domain
   const appUrl = window.location.origin;
 
@@ -286,12 +303,21 @@ export default function App() {
       {/* Floating Network & Theme Utilities Layer */}
       <div className="fixed top-4 right-4 z-[9999] flex items-center gap-2">
         {/* Network connection HUD */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161920]/85 backdrop-blur-md border border-white/5 shadow-xl select-none">
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161920]/85 backdrop-blur-md border border-white/5 shadow-xl select-none">
           <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
           <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-slate-400">
             {isOnline ? "Online" : "Sem Rede"}
           </span>
         </div>
+
+        {/* Manual Refresh Action */}
+        <button
+          onClick={handleForceRefresh}
+          className="p-2.5 bg-[#161920]/85 hover:bg-[#161920] border border-white/5 rounded-xl transition-all cursor-pointer text-slate-400 hover:text-blue-400 hover:rotate-180 shadow-xl flex items-center justify-center backdrop-blur-md active:scale-95"
+          title="Verificar Atualizações / Recarregar"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
 
         {/* Sun/Moon Toggle */}
         <button
