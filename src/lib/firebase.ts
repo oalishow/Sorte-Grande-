@@ -430,13 +430,15 @@ export function firebaseSubscribeAllRooms(callback: (rooms: Room[]) => void) {
   try {
     const q = query(
       collection(db, 'rooms'),
-      where('deletedAt', '==', null),
       orderBy('createdAt', 'desc'),
       limit(100)
     );
     return onSnapshot(q, (snap) => {
       const rooms: Room[] = [];
-      snap.forEach(d => rooms.push(d.data() as Room));
+      snap.forEach(d => {
+        const r = d.data() as Room;
+        if (!r.deletedAt) rooms.push(r);
+      });
       callback(rooms);
     }, (err) => {
       // Fallback if index not ready
@@ -557,13 +559,13 @@ export function firebaseSubscribeOpenRooms(callback: (rooms: Room[]) => void) {
   try {
     const q = query(
       collection(db, 'rooms'),
-      where('isOpenRoom', '==', true),
-      where('deletedAt', '==', null)
+      where('isOpenRoom', '==', true)
     );
     return onSnapshot(q, (snap) => {
       const openRooms: Room[] = [];
       snap.forEach(d => {
-        openRooms.push(d.data() as Room);
+        const r = d.data() as Room;
+        if (!r.deletedAt) openRooms.push(r);
       });
       callback(openRooms);
     }, (err) => {

@@ -134,6 +134,23 @@ export default function App() {
       if (room) {
         setRoomState(room);
         setError(null);
+        
+        // Guard into recently joined rooms for single-click rejoin
+        try {
+          const recentsStr = localStorage.getItem("raffle_recent_rooms");
+          let recents = recentsStr ? JSON.parse(recentsStr) : [];
+          if (!Array.isArray(recents)) recents = [];
+          recents = recents.filter((r: any) => r.id !== room.id);
+          recents.unshift({
+            id: room.id,
+            name: room.name,
+            joinedAt: Date.now()
+          });
+          recents = recents.slice(0, 8); // Store up to 8 rooms
+          localStorage.setItem("raffle_recent_rooms", JSON.stringify(recents));
+        } catch (e) {
+          console.error("Erro ao atualizar histórico de salas:", e);
+        }
       } else {
         setError("Sala de sorteio não encontrada. Ela pode ter expirado ou sido encerrada.");
       }

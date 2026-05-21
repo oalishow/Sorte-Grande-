@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus, Monitor, Heart } from "lucide-react";
+import { Gift, Sparkles, Send, Shield, Radio, Settings, KeyRound, Trophy, Award, Download, Smartphone, Share2, Plus, Monitor, Heart, Trash2, History } from "lucide-react";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
 import { apiFetch } from "../lib/api";
@@ -44,6 +44,34 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
 
     return () => unsubscribe();
   }, []);
+
+  const [recentRooms, setRecentRooms] = useState<Array<{ id: string; name: string; joinedAt: number }>>([]);
+
+  // Load recent rooms from localStorage
+  useEffect(() => {
+    try {
+      const recentsStr = localStorage.getItem("raffle_recent_rooms");
+      if (recentsStr) {
+        const parsed = JSON.parse(recentsStr);
+        if (Array.isArray(parsed)) {
+          setRecentRooms(parsed);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao carregar salas recentes:", e);
+    }
+  }, []);
+
+  const handleRemoveRecent = (idToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const updated = recentRooms.filter(r => r.id !== idToDelete);
+      setRecentRooms(updated);
+      localStorage.setItem("raffle_recent_rooms", JSON.stringify(updated));
+    } catch (err) {
+      console.error("Erro ao remover sala recente do histórico:", err);
+    }
+  };
 
   // Custom Modal States
   const [modalOpen, setModalOpen] = useState(false);
@@ -405,6 +433,70 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
                   {isLoading ? "Entrando..." : "Entrar no Sorteio →"}
                 </button>
               </form>
+
+              {/* Recent Rooms list */}
+              {recentRooms.length > 0 && (
+                <div className="text-left space-y-3 pt-5 border-t border-white/5">
+                  <div className="flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-sans">
+                      Salas que Você Participou (Retornar)
+                    </span>
+                    <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full font-bold">
+                      {recentRooms.length}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-sans leading-normal">
+                    Selecione uma sala recente abaixo para voltar instantaneamente, com todo o seu progresso mantido:
+                  </p>
+
+                  <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                    {recentRooms.map((r) => {
+                      const isCreator = localStorage.getItem(`raffle_room_${r.id}_creator`) === "true";
+                      return (
+                        <div
+                          key={r.id}
+                          onClick={() => startJoinAnimation(r.id)}
+                          className="w-full bg-[#0F1115] hover:bg-blue-500/5 hover:border-blue-500/25 border border-white/5 p-3 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer group"
+                        >
+                          <div className="space-y-0.5 min-w-0 flex-1 pr-3">
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+                                {r.name}
+                              </h4>
+                              {isCreator && (
+                                <span className="text-[9px] font-bold bg-rose-500/10 text-rose-450 px-1.5 py-0.2 rounded border border-rose-500/10 uppercase tracking-wider shrink-0 font-sans scale-90">
+                                  Dono 👑
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                              <span>Código: #{r.id}</span>
+                              <span>•</span>
+                              <span>{new Date(r.joinedAt).toLocaleDateString("pt-BR")}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 font-extrabold px-2.5 py-1 rounded-lg group-hover:scale-105 transition-all font-sans">
+                              Retornar ↩
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={(e) => handleRemoveRecent(r.id, e)}
+                              className="p-1.5 bg-white/5 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 text-slate-500 hover:text-rose-500 rounded-lg transition-all"
+                              title="Remover do histórico"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </motion.div>
