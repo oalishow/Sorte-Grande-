@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Trophy, Gift, Sparkles, User, Ticket, Award, Zap, ChevronRight, RefreshCw } from "lucide-react";
 import { audioService } from "../utils/audio";
@@ -201,6 +201,8 @@ export default function DrawAnimator({
     };
   }, [winningNumber, duration, countdownActive]);
 
+  const nextParticleIdRef = useRef(1000);
+
   // Premium double-corner particle emission for gorgeous celebrations
   const triggerConfettiForce = () => {
     const list: Particle[] = [];
@@ -220,7 +222,7 @@ export default function DrawAnimator({
       const angle = -Math.PI / 4 + (Math.random() - 0.5) * 0.4; // diagonal right-up
       const speed = 4 + Math.random() * 12;
       list.push({
-        id: i,
+        id: nextParticleIdRef.current++,
         x: 10,
         y: 80,
         vx: Math.cos(angle) * speed * 0.35,
@@ -238,7 +240,7 @@ export default function DrawAnimator({
       const angle = -Math.PI * 0.75 + (Math.random() - 0.5) * 0.4; // diagonal left-up
       const speed = 4 + Math.random() * 12;
       list.push({
-        id: i,
+        id: nextParticleIdRef.current++,
         x: 90,
         y: 80,
         vx: Math.cos(angle) * speed * 0.35,
@@ -256,7 +258,7 @@ export default function DrawAnimator({
       const angle = Math.random() * Math.PI * 2;
       const speed = 3 + Math.random() * 8;
       list.push({
-        id: i,
+        id: nextParticleIdRef.current++,
         x: 50,
         y: 45,
         vx: Math.cos(angle) * speed * 0.3,
@@ -272,24 +274,68 @@ export default function DrawAnimator({
     setParticles(list);
   };
 
-  // Fluid particle update physics
+  // Fluid particle update physics - with continuous replenishment for infinite confetti explosion
   useEffect(() => {
     if (stage !== "revealed" || particles.length === 0) return;
 
     let particleAnim: any;
     const updatePhysics = () => {
-      setParticles((prev) =>
-        prev
+      setParticles((prev) => {
+        // Move current active particles
+        const visible = prev
           .map((p) => ({
             ...p,
             x: p.x + p.vx,
             y: p.y + p.vy,
-            vy: p.vy + 0.016, // pull gravity
+            vy: p.vy + 0.012, // slightly lower pull gravity for longer hang time
             vx: p.vx * 0.985, // air friction resistance
             rotation: p.rotation + p.vRotation,
           }))
-          .filter((p) => p.y < 125 && p.x > -25 && p.x < 125)
-      );
+          .filter((p) => p.y < 125 && p.x > -25 && p.x < 125);
+
+        // Keep continuous confetti spawning to maintain a steady explosion flow
+        if (visible.length < 180) {
+          const colors = [
+            "#F59E0B", // Gold
+            "#E11D48", // Rose Red
+            "#3B82F6", // Blue
+            "#10B981", // Emerald
+            "#EC4899", // Neon Pink
+            "#8B5CF6", // Violet
+            "#06B6D4", // Cyan
+          ];
+          const shapes: ("circle" | "square" | "triangle" | "star")[] = ["circle", "square", "triangle", "star"];
+          const trickle: Particle[] = [];
+          
+          // Spawn 3 new trickle particles
+          for (let i = 0; i < 3; i++) {
+            const isLeft = Math.random() > 0.5;
+            const angle = isLeft 
+              ? -Math.PI / 4 + (Math.random() - 0.5) * 0.4 // shot right-up
+              : -Math.PI * 0.75 + (Math.random() - 0.5) * 0.4; // shot left-up
+            
+            const speed = 4 + Math.random() * 12;
+            const startX = isLeft ? 5 : 95;
+
+            trickle.push({
+              id: nextParticleIdRef.current++,
+              x: startX,
+              y: 80,
+              vx: Math.cos(angle) * speed * 0.35,
+              vy: Math.sin(angle) * speed * 0.35 - 0.7,
+              color: colors[Math.floor(Math.random() * colors.length)],
+              size: 5 + Math.random() * 10,
+              rotation: Math.random() * 360,
+              vRotation: (Math.random() - 0.5) * 12,
+              shape: shapes[Math.floor(Math.random() * shapes.length)],
+            });
+          }
+          return [...visible, ...trickle];
+        }
+
+        return visible;
+      });
+
       particleAnim = requestAnimationFrame(updatePhysics);
     };
 

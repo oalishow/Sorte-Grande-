@@ -1,15 +1,62 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { Room, Participant, Prize } from "./src/types";
 
 const app = express();
 const PORT = 3000;
 
-// In-memory room storage
-const rooms: Record<string, Room> = {};
+// Persistent Database helper
+const DB_FILE = path.join(process.cwd(), "rooms_db.json");
+
+let rooms: Record<string, Room> = {};
+let deletedRooms: Record<string, Room & { deletedAt: number }> = {};
+
+function loadDB() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const dbContent = fs.readFileSync(DB_FILE, "utf-8");
+      if (dbContent.trim()) {
+        const parsed = JSON.parse(dbContent);
+        rooms = parsed.rooms || {};
+        deletedRooms = parsed.deletedRooms || {};
+        console.log(`[Database] Carregou ${Object.keys(rooms).length} salas e ${Object.keys(deletedRooms).length} salas na lixeira.`);
+      }
+    } else {
+      rooms = {};
+      deletedRooms = {};
+      saveDB();
+    }
+  } catch (err) {
+    console.error("[Database] Erro ao carregar arquivo de persistência:", err);
+    rooms = {};
+    deletedRooms = {};
+  }
+}
+
+function saveDB() {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify({ rooms, deletedRooms }, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[Database] Erro ao gravar banco de dados de persistência:", err);
+  }
+}
+
+// Initialize persistence
+loadDB();
 
 app.use(express.json());
+
+// Auto-persist middleware for successful mutations
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    if (["POST", "PUT", "DELETE"].includes(req.method) && res.statusCode >= 200 && res.statusCode < 300) {
+      saveDB();
+    }
+  });
+  next();
+});
 
 // API: Health probe
 app.get("/api/health", (req, res) => {
@@ -62,6 +109,7 @@ app.post("/api/rooms", (req, res) => {
     classicNoRepeat: true,
     classicDrawnNumbers: [],
     isOpenRoom: !!isOpenRoom,
+    drawHistory: [],
   };
 
   rooms[roomId] = newRoom;
@@ -121,6 +169,7 @@ app.post("/api/rooms/:roomId/settings", (req, res) => {
   }
   if (clearHistory) {
     room.classicDrawnNumbers = [];
+    room.drawHistory = [];
     room.prizes.forEach(p => {
       p.winner = null;
       p.drawnAt = null;
@@ -139,7 +188,7 @@ app.post("/api/rooms/:roomId/settings", (req, res) => {
 // API: Join a room
 app.post("/api/rooms/:roomId/join", (req, res) => {
   const { roomId } = req.params;
-  const { name, playerId } = req.body;
+  const { name, playerId, requesterPlayerId, masterPassword } = req.body;
   
   if (!name || name.trim() === "") {
     res.status(400).json({ error: "O nome do participante é obrigatório." });
@@ -154,6 +203,17 @@ app.post("/api/rooms/:roomId/join", (req, res) => {
   if (!room) {
     res.status(404).json({ error: "Sala de sorteio não encontrada." });
     return;
+  }
+
+  // Check permission if adding someone else (manual entry from admin panel)
+  const isAddingManual = playerId.startsWith("manual_") || (requesterPlayerId && requesterPlayerId !== playerId);
+  if (isAddingManual) {
+    const isCreator = requesterPlayerId && requesterPlayerId === room.creatorId;
+    const isMaster = masterPassword === "7777";
+    if (!isCreator && !isMaster) {
+      res.status(403).json({ error: "Apenas o criador da sala ou o administrador mestre pode adicionar outros participantes." });
+      return;
+    }
   }
 
   // Check if player is already in this room
@@ -180,7 +240,7 @@ app.post("/api/rooms/:roomId/join", (req, res) => {
 // API: Add a prize to the room
 app.post("/api/rooms/:roomId/prizes", (req, res) => {
   const { roomId } = req.params;
-  const { name } = req.body;
+  const { name, playerId, masterPassword } = req.body;
 
   if (!name || name.trim() === "") {
     res.status(400).json({ error: "O nome do prêmio é obrigatório." });
@@ -190,6 +250,14 @@ app.post("/api/rooms/:roomId/prizes", (req, res) => {
   const room = rooms[roomId.toUpperCase()];
   if (!room) {
     res.status(404).json({ error: "Sala de sorteio não encontrada." });
+    return;
+  }
+
+  // Only the creator or master administrator can create prizes
+  const isCreator = playerId && playerId === room.creatorId;
+  const isMaster = masterPassword === "7777";
+  if (!isCreator && !isMaster) {
+    res.status(403).json({ error: "Apenas o criador da sala ou o administrador mestre pode gerenciar prêmios." });
     return;
   }
 
@@ -207,10 +275,20 @@ app.post("/api/rooms/:roomId/prizes", (req, res) => {
 // API: Delete a prize
 app.delete("/api/rooms/:roomId/prizes/:prizeId", (req, res) => {
   const { roomId, prizeId } = req.params;
+  const playerId = (req.query.playerId as string) || req.body.playerId;
+  const masterPassword = (req.query.masterPassword as string) || req.body.masterPassword;
 
   const room = rooms[roomId.toUpperCase()];
   if (!room) {
     res.status(404).json({ error: "Sala de sorteio não encontrada." });
+    return;
+  }
+
+  // Only the creator or master administrator can delete prizes
+  const isCreator = playerId && playerId === room.creatorId;
+  const isMaster = masterPassword === "7777";
+  if (!isCreator && !isMaster) {
+    res.status(403).json({ error: "Apenas o criador da sala ou o administrador mestre pode gerenciar prêmios." });
     return;
   }
 
@@ -318,6 +396,24 @@ app.post("/api/rooms/:roomId/draw", (req, res) => {
       room.drawingStartedAt = Date.now();
     }
 
+    let pName = "Sorteio Rápido 🎲";
+    if (prizeId !== "quick_draw") {
+      const pIdx = room.prizes.findIndex((p) => p.id === prizeId);
+      if (pIdx !== -1) {
+        pName = room.prizes[pIdx].name;
+      }
+    }
+    const historyEntry = {
+      id: `hist_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      prizeName: pName,
+      winnerName: winner.name,
+      ticketNumber: winner.ticketNumber,
+      drawMode: "classic" as const,
+      drawnAt: Date.now(),
+    };
+    if (!room.drawHistory) room.drawHistory = [];
+    room.drawHistory.push(historyEntry);
+
     res.json(room);
     return;
   }
@@ -355,6 +451,17 @@ app.post("/api/rooms/:roomId/draw", (req, res) => {
   room.currentWinner = winner;
   room.currentWinningNumber = winner.ticketNumber;
   room.drawingStartedAt = Date.now();
+
+  const historyEntry = {
+    id: `hist_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    prizeName: room.prizes[prizeIndex].name,
+    winnerName: winner.name,
+    ticketNumber: winner.ticketNumber,
+    drawMode: "qrcode" as const,
+    drawnAt: Date.now(),
+  };
+  if (!room.drawHistory) room.drawHistory = [];
+  room.drawHistory.push(historyEntry);
 
   res.json(room);
 });
@@ -451,7 +558,7 @@ app.post("/api/admin/rooms/create-test", (req, res) => {
   res.status(201).json(newRoom);
 });
 
-// API: Admin: Delete any room
+// API: Admin: Delete any room (move to trash)
 app.post("/api/admin/rooms/delete", (req, res) => {
   const { password, roomId } = req.body;
   if (password !== "7777") {
@@ -460,13 +567,95 @@ app.post("/api/admin/rooms/delete", (req, res) => {
   }
 
   const targetId = (roomId || "").toUpperCase();
-  if (!rooms[targetId]) {
+  const room = rooms[targetId];
+  if (!room) {
     res.status(404).json({ error: "Sala não encontrada." });
     return;
   }
 
+  // Check if room has prizes and any prize has a null winner (meaning some prizes are not drawn yet)
+  const hasUndrawnPrizes = room.prizes && room.prizes.length > 0 && room.prizes.some(p => p.winner === null);
+  if (hasUndrawnPrizes) {
+    res.status(400).json({ error: "Não é possível enviar esta sala para a lixeira enquanto houver prêmios pendentes de sorteio. Realize todos os sorteios primeiro!" });
+    return;
+  }
+
+  // Move to trash
+  const trashedRoom = {
+    ...room,
+    deletedAt: Date.now()
+  };
+  deletedRooms[targetId] = trashedRoom;
   delete rooms[targetId];
-  res.json({ success: true, message: `Sala ${targetId} excluída com sucesso.` });
+
+  res.json({ success: true, message: `Sala ${targetId} enviada para a lixeira com sucesso.` });
+});
+
+// API: Admin: Get trashed rooms list
+app.post("/api/admin/rooms/trash", (req, res) => {
+  const { password } = req.body;
+  if (password !== "7777") {
+    res.status(403).json({ error: "Senha mestre inválida." });
+    return;
+  }
+  const trashList = Object.values(deletedRooms).sort((a, b) => b.deletedAt - a.deletedAt);
+  res.json({ rooms: trashList });
+});
+
+// API: Admin: Restore room from trash
+app.post("/api/admin/rooms/restore", (req, res) => {
+  const { password, roomId } = req.body;
+  if (password !== "7777") {
+    res.status(403).json({ error: "Senha mestre inválida." });
+    return;
+  }
+
+  const targetId = (roomId || "").toUpperCase();
+  const room = deletedRooms[targetId];
+  if (!room) {
+    res.status(404).json({ error: "Sala não encontrada na lixeira." });
+    return;
+  }
+
+  // Restore to active list
+  const { deletedAt, ...restoredRoom } = room;
+  rooms[targetId] = restoredRoom;
+  delete deletedRooms[targetId];
+
+  res.json({ success: true, message: `Sala ${targetId} restaurada de volta às salas ativas.` });
+});
+
+// API: Admin: Delete room permanently
+app.post("/api/admin/rooms/delete-permanently", (req, res) => {
+  const { password, roomId } = req.body;
+  if (password !== "7777") {
+    res.status(403).json({ error: "Senha mestre inválida." });
+    return;
+  }
+
+  const targetId = (roomId || "").toUpperCase();
+  if (!deletedRooms[targetId]) {
+    res.status(404).json({ error: "Sala não encontrada na lixeira de exclusões." });
+    return;
+  }
+
+  delete deletedRooms[targetId];
+  res.json({ success: true, message: `Sala ${targetId} foi excluída permanentemente com sucesso.` });
+});
+
+// API: Admin: Empty trash
+app.post("/api/admin/rooms/empty-trash", (req, res) => {
+  const { password } = req.body;
+  if (password !== "7777") {
+    res.status(403).json({ error: "Senha mestre inválida." });
+    return;
+  }
+
+  for (const tid in deletedRooms) {
+    delete deletedRooms[tid];
+  }
+
+  res.json({ success: true, message: "Lixeira foi esvaziada por completo." });
 });
 
 // Vite + Static Serving Pipeline

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Participant, Prize } from "../types";
-import { Gift, Ticket, User, Sparkles, LogOut, ArrowLeft, Heart, CheckCircle, Radio } from "lucide-react";
+import { Gift, Ticket, User, Users, Sparkles, LogOut, ArrowLeft, Heart, CheckCircle, Radio } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 
@@ -264,7 +264,7 @@ export default function ParticipantPanel({
                         Nenhum prêmio cadastrado nesta sala ainda.
                       </p>
                     ) : (
-                      <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                         {room.prizes.map((p) => (
                           <div
                             key={p.id}
@@ -287,6 +287,58 @@ export default function ParticipantPanel({
                       </div>
                     )}
                   </div>
+
+                  {/* Active Participants list with subtle pulsing and glowing animations */}
+                  <div className="bg-[#161920] rounded-2xl p-4 border border-white/5 shadow-lg shadow-slate-950/10">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3 select-none">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-blue-400" />
+                        Participantes na Sala ({room.participants.length})
+                      </h4>
+                      <div className="flex items-center gap-1.5">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-[9px] font-mono font-black text-emerald-400 uppercase tracking-wider">ONLINE</span>
+                      </div>
+                    </div>
+
+                    {room.participants.length === 0 ? (
+                      <p className="text-center text-slate-500 text-[11px] font-sans py-4">
+                        Nenhum participante conectado ainda.
+                      </p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {room.participants.map((p) => {
+                          const isCurrentUser = p.id === playerId;
+                          return (
+                            <div
+                              key={p.id}
+                              className={`text-xs py-2 px-2.5 rounded-lg border flex items-center justify-between transition-all duration-300 ${
+                                isCurrentUser
+                                  ? "bg-blue-950/20 border-blue-550/30 shadow-[0_0_12px_rgba(59,130,246,0.15)] animate-[pulse_3s_infinite]"
+                                  : "bg-[#0F1115] border-white/5 hover:border-blue-500/10 hover:shadow-[0_0_10px_rgba(59,130,246,0.05)]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
+                                </span>
+                                <span className={`font-semibold truncate max-w-[160px] ${isCurrentUser ? "text-blue-300" : "text-slate-200"}`}>
+                                  {p.name} {isCurrentUser && <span className="text-[10px] text-blue-500 font-normal font-mono">(Você)</span>}
+                                </span>
+                              </div>
+                              <span className="font-mono text-[10px] font-bold text-slate-500 bg-[#161920] border border-white/5 px-2 py-0.5 rounded">
+                                #{p.ticketNumber}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -300,7 +352,9 @@ export default function ParticipantPanel({
           Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
         </p>
         <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
-          <span>Versão: 0.11 (Beta)</span>
+          <span>Versão: 0.14 (Beta)</span>
+          <span>•</span>
+          <span>Build: 2026-05-21</span>
           <span>•</span>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

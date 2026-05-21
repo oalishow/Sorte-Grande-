@@ -203,10 +203,11 @@ export default function App() {
 
   const handleAddPrize = async (name: string) => {
     try {
+      const masterPassword = sessionStorage.getItem("master_password") || "";
       const res = await fetch(`/api/rooms/${roomId}/prizes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, playerId, masterPassword }),
       });
       
       if (res.ok) {
@@ -222,7 +223,12 @@ export default function App() {
 
   const handleRemovePrize = async (prizeId: string) => {
     try {
-      const res = await fetch(`/api/rooms/${roomId}/prizes/${prizeId}`, {
+      const masterPassword = sessionStorage.getItem("master_password") || "";
+      const params = new URLSearchParams({
+        playerId,
+        masterPassword,
+      });
+      const res = await fetch(`/api/rooms/${roomId}/prizes/${prizeId}?${params.toString()}`, {
         method: "DELETE",
       });
       
@@ -313,6 +319,7 @@ export default function App() {
         return (
           <AdminPanel
             room={roomState}
+            playerId={playerId}
             onAddPrize={handleAddPrize}
             onRemovePrize={handleRemovePrize}
             onDrawPrize={handleDrawPrize}

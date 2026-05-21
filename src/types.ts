@@ -12,6 +12,15 @@ export interface Prize {
   drawnAt: number | null;
 }
 
+export interface DrawHistoryEntry {
+  id: string;
+  prizeName: string;
+  winnerName: string;
+  ticketNumber: number;
+  drawMode: 'qrcode' | 'classic';
+  drawnAt: number;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -24,10 +33,12 @@ export interface Room {
   currentWinningNumber: number | null;
   drawingStartedAt: number | null;
   createdAt: number;
+  deletedAt?: number; // Optional timestamp when moved to trash
   drawMode?: 'qrcode' | 'classic';
   classicMin?: number;
   classicMax?: number;
   classicNoRepeat?: boolean;
   classicDrawnNumbers?: number[];
   isOpenRoom?: boolean;
+  drawHistory?: DrawHistoryEntry[];
 }

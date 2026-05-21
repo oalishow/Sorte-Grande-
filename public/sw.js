@@ -1,4 +1,4 @@
-const CACHE_NAME = "vouganhei-pwa-v0.11";
+const CACHE_NAME = "vouganhei-pwa-v0.14";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",

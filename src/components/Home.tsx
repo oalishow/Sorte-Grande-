@@ -175,7 +175,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            Entrar com Código
+            Entrar nos Sorteios
           </button>
         </motion.div>
 
@@ -430,7 +430,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
             <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
             <h3 className="font-display text-xs font-extrabold uppercase tracking-wider text-slate-300">
-              Novidades da Versão 0.11
+              Novidades da Versão 0.14
             </h3>
             <span className="ml-auto text-[9px] font-mono font-bold bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
               PWA ATIVO
@@ -438,21 +438,21 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           </div>
           <div className="space-y-2.5 text-xs text-slate-400">
             <div className="flex items-start gap-2">
+              <span className="text-emerald-400 font-bold mt-0.5">•</span>
+              <p>
+                <strong className="text-slate-200">Salas Abertas vs. Fechadas:</strong> Crie salas públicas que aparecem listadas automaticamente para entrada rápida de qualquer smartphone conectado, ou opte pela segurança tradicional com código.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
               <span className="text-amber-500 font-bold mt-0.5">•</span>
               <p>
-                <strong className="text-slate-200">Próximo Prêmio Rápido:</strong> Ao clicar em "Próximo Prêmio", o sorteio do próximo item inicia na sequência automaticamente, poupando caminhos.
+                <strong className="text-slate-200">Suporte Modo Claro de Cores:</strong> Correções visuais meticulosas no painel de sorteio, tickets neon e modal do ganhador para garantir legibilidade ideal sob ambientes ensolarados.
               </p>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-blue-400 font-bold mt-0.5">•</span>
               <p>
-                <strong className="text-slate-200">Instalação PWA:</strong> Adicione o <strong className="text-blue-400">VouGanhei!</strong> diretamente na sua tela inicial para acesso offline e fluido.
-              </p>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-emerald-400 font-bold mt-0.5">•</span>
-              <p>
-                <strong className="text-slate-200">Rede & Conexão:</strong> Status ativos no rodapé para garantir o seu sincronismo dinâmico nos sorteios ao vivo.
+                <strong className="text-slate-200">Build Oficial Realizado em 21/05/2026:</strong> Versão consolidada com correções completas, desempenho refinado de carregamento e design card de destaques no painel inicial.
               </p>
             </div>
             <div className="flex items-start gap-2">
@@ -552,7 +552,9 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
             Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
           </p>
           <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
-            <span>Versão: 0.11 (Beta)</span>
+            <span>Versão: 0.14 (Beta)</span>
+            <span>•</span>
+            <span>Build: 2026-05-21</span>
             <span>•</span>
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
