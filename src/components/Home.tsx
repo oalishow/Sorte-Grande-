@@ -629,11 +629,8 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
             Ajude o seminarista a produzir mais soluções tecnológicas para a Igreja, toda ajuda é bem vinda para cobrir os custos.
           </p>
           <div className="flex flex-col items-center justify-center bg-white/5 py-4 rounded-xl border border-white/5 group hover:border-emerald-500/20 transition-all">
-            <form action="https://www.paypal.com/donate" method="post" target="_top">
-              <input type="hidden" name="business" value="NSDVMFFLK95U6" />
-              <input type="hidden" name="no_recurring" value="0" />
-              <input type="hidden" name="item_name" value="Ajude o seminarista a produzir mais soluções tecnológicas para a Igreja, toda ajuda é bem vinda para cobrir os custos." />
-              <input type="hidden" name="currency_code" value="BRL" />
+            <form action="https://www.paypal.com/donate" method="post" target="_blank">
+              <input type="hidden" name="hosted_button_id" value="FLVDNY994MNQS" />
               <input type="image" src="https://www.paypalobjects.com/pt_BR/BR/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Faça doações com o botão do PayPal" className="hover:scale-105 transition-transform" />
               <img alt="" border="0" src="https://www.paypal.com/pt_BR/i/scr/pixel.gif" width="1" height="1" />
             </form>
