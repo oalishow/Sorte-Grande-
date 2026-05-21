@@ -613,6 +613,10 @@ export async function firebaseSendChatMessage(
     if (!snap.exists()) throw new Error("Sala não encontrada.");
     const room = snap.data() as Room;
 
+    if (!isAdmin && room.mutedUserIds?.includes(senderId)) {
+      throw new Error("Você está silenciado(a) neste sorteio.");
+    }
+
     const messages = room.messages || [];
     const newMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -628,5 +632,91 @@ export async function firebaseSendChatMessage(
     await updateDoc(docRef, { messages: updatedMessages });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `rooms/${upperCode}/messages`);
+  }
+}
+
+export async function firebaseMuteUser(
+  roomId: string,
+  userIdToMute: string,
+  shouldMute: boolean
+): Promise<void> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error("Sala não encontrada.");
+    const room = snap.data() as Room;
+
+    let mutedUserIds = room.mutedUserIds || [];
+    if (shouldMute) {
+      if (!mutedUserIds.includes(userIdToMute)) {
+        mutedUserIds = [...mutedUserIds, userIdToMute];
+      }
+    } else {
+      mutedUserIds = mutedUserIds.filter(id => id !== userIdToMute);
+    }
+
+    await updateDoc(docRef, { mutedUserIds });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `rooms/${upperCode}/mutedUserIds`);
+  }
+}
+
+export async function firebaseRemoveUserMessages(
+  roomId: string,
+  userIdToRemove: string
+): Promise<void> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error("Sala não encontrada.");
+    const room = snap.data() as Room;
+
+    const messages = room.messages || [];
+    const updatedMessages = messages.filter(msg => msg.senderId !== userIdToRemove);
+
+    await updateDoc(docRef, { messages: updatedMessages });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `rooms/${upperCode}/messages`);
+  }
+}
+
+export async function firebaseUpdateTypingStatus(
+  roomId: string,
+  userId: string,
+  userName: string,
+  isTyping: boolean
+): Promise<void> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return;
+    const room = snap.data() as Room;
+
+    const typingUsers = { ...(room.typingUsers || {}) };
+
+    if (isTyping) {
+      typingUsers[userId] = {
+        name: userName,
+        timestamp: Date.now()
+      };
+    } else {
+      delete typingUsers[userId];
+    }
+
+    // Clean up stale indicators (older than 10 seconds)
+    const now = Date.now();
+    Object.keys(typingUsers).forEach(uid => {
+      if (now - typingUsers[uid].timestamp > 10000) {
+        delete typingUsers[uid];
+      }
+    });
+
+    await updateDoc(docRef, { typingUsers });
+  } catch (err) {
+    // Fail silently
+    console.warn("Erro ao atualizar estado 'digitando...':", err);
   }
 }

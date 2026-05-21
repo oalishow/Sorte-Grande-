@@ -76,7 +76,11 @@ export default function App() {
   };
 
   // Dev Server URL - AI Studio proxies port 3000 to this domain
-  const appUrl = window.location.origin;
+  // We guarantee it points to a publicly accessible host (like Cloud Run) when accessed inside sandboxes or on localhost, so that QR Code scans from phones never get blocked.
+  const getAppUrl = () => {
+    return "https://vouganhei.netlify.app";
+  };
+  const appUrl = getAppUrl();
 
   // Initialize client routing & player state
   useEffect(() => {

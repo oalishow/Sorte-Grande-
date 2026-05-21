@@ -270,7 +270,7 @@ export default function AdminPanel({
   const joinUrl = `${appUrl}/room/${room.id}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&color=0-0-0&bgcolor=255-255-255&qzone=2&data=${encodeURIComponent(
     joinUrl
-  )}`;
+  )}&t=${room.id}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(joinUrl);
@@ -645,6 +645,11 @@ export default function AdminPanel({
                       Ampliar 🔍
                     </span>
                   </div>
+                </div>
+
+                {/* Exibe o Link Claro e Amigável do QR Code para Verificação */}
+                <div className="bg-[#0F1115] border border-white/5 rounded-xl px-3 py-1.5 text-[10px] font-mono text-blue-400 max-w-xs mx-auto mb-3 select-all cursor-text break-all">
+                  {joinUrl}
                 </div>
 
                 <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed font-sans mt-2">
@@ -1143,13 +1148,18 @@ export default function AdminPanel({
                 QR Code de Entrada Ampliado 🔍
               </h3>
 
-              <div className="p-6 bg-white rounded-3xl shadow-2xl border-none mb-6">
+              <div className="p-6 bg-white rounded-3xl shadow-2xl border-none mb-4">
                 <img
                   src={qrCodeUrl}
                   alt="QR Code Entrada Ampliado"
                   className="w-72 h-72 sm:w-96 sm:h-96 select-none"
                   draggable={false}
                 />
+              </div>
+
+              {/* Show full QR encoded link here for verification and manual copy */}
+              <div className="bg-[#0F1115] border border-white/5 rounded-2xl px-4 py-2 text-xs md:text-sm font-mono text-emerald-400 max-w-md mx-auto mb-6 select-all cursor-text break-all">
+                {joinUrl}
               </div>
 
               <div className="w-full flex flex-col items-center">
