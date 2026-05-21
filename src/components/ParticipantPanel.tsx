@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Participant, Prize } from "../types";
 import { Gift, Ticket, User, Users, Sparkles, LogOut, ArrowLeft, Heart, CheckCircle, Radio } from "lucide-react";
@@ -21,6 +21,15 @@ export default function ParticipantPanel({
   const [nameInput, setNameInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const [drawFinished, setDrawFinished] = useState(false);
+
+  useEffect(() => {
+    // Reset drawFinished when status changes to drawing or when the winning number/prize changes
+    if (room.status === "drawing") {
+      setDrawFinished(false);
+    }
+  }, [room.status, room.currentWinningNumber, room.activePrizeId]);
 
   // Determine if this room is in Classic Sorteio mode
   const isClassicSpectator = room.drawMode === "classic";
@@ -57,7 +66,6 @@ export default function ParticipantPanel({
   const isMeWinner = room.currentWinner && room.currentWinner.id === playerId;
   const isLastPrize = room.prizes.length > 0 && room.prizes.every((p) => p.winner !== null);
   const drawDuration = isLastPrize ? 11000 : 7050;
-  const delayForWinnerCard = (drawDuration / 1000) + 0.2;
 
 
   return (
@@ -164,14 +172,14 @@ export default function ParticipantPanel({
                     winnerName={room.currentWinner.name}
                     prizeName={activePrize.name}
                     duration={drawDuration}
+                    onComplete={() => setDrawFinished(true)}
                   />
 
                   {/* Immediate alerts on user ends if active draw belongs to them */}
-                  {isMeWinner && (
+                  {isMeWinner && drawFinished && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: delayForWinnerCard }}
                       className="p-5 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-2xl border border-blue-500/30 text-white text-center shadow-xl shadow-blue-500/20"
                     >
                       <Sparkles className="w-10 h-10 mx-auto mb-2 text-white animate-spin" />
