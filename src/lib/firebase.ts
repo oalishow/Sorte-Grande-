@@ -2,15 +2,57 @@ import { initializeApp } from 'firebase/app';
 import { 
   initializeFirestore, doc, getDoc, setDoc, updateDoc, 
   deleteDoc, collection, getDocs, onSnapshot, 
-  writeBatch, query, where, orderBy, limit
+  writeBatch, query, where, orderBy, limit,
+  getDocFromServer
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { Room, Participant, Prize, DrawHistoryEntry } from '../types';
 
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
-}, firebaseConfig.firestoreDatabaseId || undefined);
+
+// Live binding export let for dynamic self-healing fallback
+export let db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false // More robust for sandbox iframes and restrictive proxies
+} as any, firebaseConfig.firestoreDatabaseId || undefined);
+
+// Self-healing database connection test
+async function verifyDatabaseConnection() {
+  const customDbId = firebaseConfig.firestoreDatabaseId;
+  if (!customDbId) return;
+  
+  try {
+    // Attempt a fast, server-only document fetch on dummy path to test connection and database existence
+    await getDocFromServer(doc(db, '_connection_test_', 'check'));
+    console.log(`[Firestore] Connected to database: ${customDbId}`);
+  } catch (err: any) {
+    const errorStr = String(err?.message || err).toLowerCase();
+    
+    // Fall back to the default database if custom is missing or throws permissions/not-found/invalid/resource errors
+    if (
+      errorStr.includes("not found") || 
+      errorStr.includes("not_found") || 
+      errorStr.includes("does not exist") || 
+      errorStr.includes("invalid") ||
+      errorStr.includes("failed to get document") ||
+      errorStr.includes("permission-denied") ||
+      errorStr.includes("insufficient permissions")
+    ) {
+      console.warn(`[Firestore] Custom database '${customDbId}' connection failed. Falling back to (default) database. Query error:`, errorStr);
+      try {
+        db = initializeFirestore(app, {
+          experimentalForceLongPolling: true,
+          useFetchStreams: false
+        } as any);
+        console.log("[Firestore] Switched to (default) database successfully.");
+      } catch (fallbackErr) {
+        console.error("[Firestore] Sorteio fallback initialization failed:", fallbackErr);
+      }
+    }
+  }
+}
+
+verifyDatabaseConnection();
 
 export enum OperationType {
   CREATE = 'create',
