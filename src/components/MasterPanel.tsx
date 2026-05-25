@@ -18,6 +18,7 @@ import { Room } from "../types";
 import CustomModal from "./CustomModal";
 import { 
   firebaseCreateRoom,
+  firebaseCreateTestRoom,
   firebaseAddPrize,
   firebaseSubscribeAllRooms,
   firebaseSubscribeTrashedRooms,
@@ -26,6 +27,7 @@ import {
   firebaseDeleteRoomPermanently, 
   firebaseEmptyTrash 
 } from "../lib/firebase";
+import { safeStorage, safeSessionStorage } from "../lib/safeStorage";
 
 interface MasterPanelProps {
   onBack: () => void;
@@ -51,7 +53,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
 
   // Check session storage if already authenticated in this browser tab
   useEffect(() => {
-    const savedPass = sessionStorage.getItem("master_password");
+    const savedPass = safeSessionStorage.getItem("master_password");
     if (savedPass === "7777") {
       setPassword("7777");
       setIsUnlocked(true);
@@ -85,7 +87,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     
     if (password === "7777") {
       setIsUnlocked(true);
-      sessionStorage.setItem("master_password", "7777");
+      safeSessionStorage.setItem("master_password", "7777");
       setErrorMsg("");
     } else {
       setErrorMsg("Senha incorreta.");
@@ -98,13 +100,9 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
     setErrorMsg("");
     try {
       const roomName = testRoomName || "Sala de Testes 🧪";
-      const newTestRoom = await firebaseCreateRoom(roomName, "master_test_id", true);
+      const newTestRoom = await firebaseCreateTestRoom(roomName);
       
-      await firebaseAddPrize(newTestRoom.id, "Kit Caneca e Chocolate 🍫☕");
-      await firebaseAddPrize(newTestRoom.id, "Garrafa Térmica Premium 🥤");
-      await firebaseAddPrize(newTestRoom.id, "Fone de Ouvido Bluetooth 🎧");
-      
-      localStorage.setItem(`raffle_room_${newTestRoom.id}_creator`, "true");
+      safeStorage.setItem(`raffle_room_${newTestRoom.id}_creator`, "true");
       onSelectAdminRoom(newTestRoom.id);
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -173,7 +171,7 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
   };
 
   const handleClearAuth = () => {
-    sessionStorage.removeItem("master_password");
+    safeSessionStorage.removeItem("master_password");
     setIsUnlocked(false);
     setPassword("");
   };
@@ -618,9 +616,9 @@ export default function MasterPanel({ onBack, onSelectAdminRoom }: MasterPanelPr
           Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
         </p>
         <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
-          <span>Versão: 0.15 (Beta)</span>
+          <span>Versão: 0.16 (Beta)</span>
           <span>•</span>
-          <span>Build: 2026-05-21</span>
+          <span>Build: 2026-05-25</span>
           <span>•</span>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-[pulse_2s_infinite]" />

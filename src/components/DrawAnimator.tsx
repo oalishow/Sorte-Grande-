@@ -43,8 +43,13 @@ export default function DrawAnimator({
   const [digits, setDigits] = useState<string[]>(["?", "?", "?"]);
   const [stage, setStage] = useState<"spinning" | "revealed">("spinning");
   const [spinningCols, setSpinningCols] = useState<boolean[]>([true, true, true]);
-  const [particles, setParticles] = useState<Particle[]>([]);
   
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const revealTimeRef = useRef<number>(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const nextParticleIdRef = useRef(1000);
+
   const [countdown, setCountdown] = useState<number | string | null>(3);
   const [countdownActive, setCountdownActive] = useState<boolean>(true);
 
@@ -226,7 +231,6 @@ export default function DrawAnimator({
         setDigits(targetDigits);
         setSpinningCols([false, false, false]);
         setStage("revealed");
-        triggerConfettiForce();
         audioService.playVictoryFanfare();
         if (onComplete) {
           onComplete();
@@ -241,25 +245,43 @@ export default function DrawAnimator({
     };
   }, [winningNumber, duration, countdownActive]);
 
-  const nextParticleIdRef = useRef(1000);
+  // Premium double-corner particle emission for gorgeous celebrations & continuous trickle
+  // Utilizing HTML5 Canvas and stable javascript ref updates to completely eliminate React Virtual DOM overhead.
+  useEffect(() => {
+    if (stage !== "revealed") {
+      particlesRef.current = [];
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (canvasRef.current) {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      return;
+    }
 
-  // Premium double-corner particle emission for gorgeous celebrations
-  const triggerConfettiForce = () => {
+    revealTimeRef.current = Date.now();
+    
+    // Create initial premium particle pool
     const list: Particle[] = [];
     const colors = [
-      "#F59E0B", // Premium Gold
+      "#F59E0B", // Gold
       "#E11D48", // Rose Red
-      "#3B82F6", // Bright Blue
-      "#10B981", // Emerald Green
-      "#EC4899", // Neon Hot Pink
-      "#8B5CF6", // Violet Purple
-      "#06B6D4", // Cyber Cyan
+      "#3B82F6", // Blue
+      "#10B981", // Emerald
+      "#EC4899", // Neon Pink
+      "#8B5CF6", // Violet
+      "#06B6D4"  // Cyber Cyan
     ];
     const shapes: ("circle" | "square" | "triangle" | "star")[] = ["circle", "square", "triangle", "star"];
 
     // Left emitter (fountains upward to right)
     for (let i = 0; i < 70; i++) {
-      const angle = -Math.PI / 4 + (Math.random() - 0.5) * 0.4; // diagonal right-up
+      const angle = -Math.PI / 4 + (Math.random() - 0.5) * 0.4;
       const speed = 4 + Math.random() * 12;
       list.push({
         id: nextParticleIdRef.current++,
@@ -277,7 +299,7 @@ export default function DrawAnimator({
 
     // Right emitter (fountains upward to left)
     for (let i = 70; i < 140; i++) {
-      const angle = -Math.PI * 0.75 + (Math.random() - 0.5) * 0.4; // diagonal left-up
+      const angle = -Math.PI * 0.75 + (Math.random() - 0.5) * 0.4;
       const speed = 4 + Math.random() * 12;
       list.push({
         id: nextParticleIdRef.current++,
@@ -311,77 +333,169 @@ export default function DrawAnimator({
       });
     }
 
-    setParticles(list);
-  };
+    particlesRef.current = list;
 
-  // Fluid particle update physics - with continuous replenishment for infinite confetti explosion
-  useEffect(() => {
-    if (stage !== "revealed" || particles.length === 0) return;
+    const updateAndDrawCanvasConfetti = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    let particleAnim: any;
-    const updatePhysics = () => {
-      setParticles((prev) => {
-        // Move current active particles
-        const visible = prev
-          .map((p) => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.012, // slightly lower pull gravity for longer hang time
-            vx: p.vx * 0.985, // air friction resistance
-            rotation: p.rotation + p.vRotation,
-          }))
-          .filter((p) => p.y < 125 && p.x > -25 && p.x < 125);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-        // Keep continuous confetti spawning to maintain a steady explosion flow
-        if (visible.length < 180) {
-          const colors = [
-            "#F59E0B", // Gold
-            "#E11D48", // Rose Red
-            "#3B82F6", // Blue
-            "#10B981", // Emerald
-            "#EC4899", // Neon Pink
-            "#8B5CF6", // Violet
-            "#06B6D4", // Cyan
-          ];
-          const shapes: ("circle" | "square" | "triangle" | "star")[] = ["circle", "square", "triangle", "star"];
-          const trickle: Particle[] = [];
+      // Match and scale resolution dynamically (with retina adjustment)
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const W = rect.width;
+      const H = rect.height;
+
+      if (W === 0 || H === 0) {
+        animationFrameRef.current = requestAnimationFrame(updateAndDrawCanvasConfetti);
+        return;
+      }
+
+      if (canvas.width !== Math.floor(W * dpr) || canvas.height !== Math.floor(H * dpr)) {
+        canvas.width = Math.floor(W * dpr);
+        canvas.height = Math.floor(H * dpr);
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, W, H);
+
+      // Move and update active particles
+      const visible = particlesRef.current
+        .map((p) => ({
+          ...p,
+          x: p.x + p.vx,
+          y: p.y + p.vy,
+          vy: p.vy + 0.012, // slightly lowered gravity for longer floating hangtime
+          vx: p.vx * 0.985, // air friction resistance
+          rotation: p.rotation + p.vRotation,
+        }))
+        .filter((p) => p.y < 125 && p.x > -25 && p.x < 125);
+
+      const elapsedSinceReveal = Date.now() - revealTimeRef.current;
+      const shouldTrickle = elapsedSinceReveal < 7500; // stop trickling after 7.5 seconds for complete CPU rest
+
+      // Spawns trickle particles dynamically directly inside the loop
+      if (visible.length < 180 && shouldTrickle) {
+        for (let i = 0; i < 3; i++) {
+          const isLeft = Math.random() > 0.5;
+          const angle = isLeft 
+            ? -Math.PI / 4 + (Math.random() - 0.5) * 0.4
+            : -Math.PI * 0.75 + (Math.random() - 0.5) * 0.4;
           
-          // Spawn 3 new trickle particles
-          for (let i = 0; i < 3; i++) {
-            const isLeft = Math.random() > 0.5;
-            const angle = isLeft 
-              ? -Math.PI / 4 + (Math.random() - 0.5) * 0.4 // shot right-up
-              : -Math.PI * 0.75 + (Math.random() - 0.5) * 0.4; // shot left-up
-            
-            const speed = 4 + Math.random() * 12;
-            const startX = isLeft ? 5 : 95;
+          const speed = 4 + Math.random() * 12;
+          const startX = isLeft ? 5 : 95;
 
-            trickle.push({
-              id: nextParticleIdRef.current++,
-              x: startX,
-              y: 80,
-              vx: Math.cos(angle) * speed * 0.35,
-              vy: Math.sin(angle) * speed * 0.35 - 0.7,
-              color: colors[Math.floor(Math.random() * colors.length)],
-              size: 5 + Math.random() * 10,
-              rotation: Math.random() * 360,
-              vRotation: (Math.random() - 0.5) * 12,
-              shape: shapes[Math.floor(Math.random() * shapes.length)],
-            });
-          }
-          return [...visible, ...trickle];
+          visible.push({
+            id: nextParticleIdRef.current++,
+            x: startX,
+            y: 80,
+            vx: Math.cos(angle) * speed * 0.35,
+            vy: Math.sin(angle) * speed * 0.35 - 0.7,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: 5 + Math.random() * 10,
+            rotation: Math.random() * 360,
+            vRotation: (Math.random() - 0.5) * 12,
+            shape: shapes[Math.floor(Math.random() * shapes.length)],
+          });
+        }
+      }
+
+      particlesRef.current = visible;
+
+      // Render each visual shape on the 2D Context
+      visible.forEach((p) => {
+        const px = (p.x / 100) * W;
+        const py = (p.y / 100) * H;
+        
+        ctx.fillStyle = p.color;
+
+        if (p.size > 8) {
+          ctx.shadowBlur = 6;
+          ctx.shadowColor = p.color;
+        } else {
+          ctx.shadowBlur = 0;
         }
 
-        return visible;
+        const rad = (p.rotation * Math.PI) / 180;
+
+        if (p.shape === "circle") {
+          ctx.beginPath();
+          ctx.arc(px, py, p.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (p.shape === "square") {
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate(rad);
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        } else if (p.shape === "triangle") {
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate(rad);
+          ctx.beginPath();
+          ctx.moveTo(0, -p.size / 2);
+          ctx.lineTo(-p.size / 2, p.size / 2);
+          ctx.lineTo(p.size / 2, p.size / 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        } else if (p.shape === "star") {
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate(rad);
+          ctx.beginPath();
+          const spikes = 5;
+          const outerRadius = p.size / 2;
+          const innerRadius = p.size / 5;
+          let rAngle = (Math.PI / 2) * 3;
+          let cx = 0;
+          let cy = 0;
+          const step = Math.PI / spikes;
+
+          ctx.moveTo(0, -outerRadius);
+          for (let i = 0; i < spikes; i++) {
+            cx = Math.cos(rAngle) * outerRadius;
+            cy = Math.sin(rAngle) * outerRadius;
+            ctx.lineTo(cx, cy);
+            rAngle += step;
+
+            cx = Math.cos(rAngle) * innerRadius;
+            cy = Math.sin(rAngle) * innerRadius;
+            ctx.lineTo(cx, cy);
+            rAngle += step;
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
       });
 
-      particleAnim = requestAnimationFrame(updatePhysics);
+      ctx.restore();
+
+      // Clear layout shadow context
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+
+      if (particlesRef.current.length > 0) {
+        animationFrameRef.current = requestAnimationFrame(updateAndDrawCanvasConfetti);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        animationFrameRef.current = null;
+      }
     };
 
-    particleAnim = requestAnimationFrame(updatePhysics);
-    return () => cancelAnimationFrame(particleAnim);
-  }, [stage, particles.length]);
+    animationFrameRef.current = requestAnimationFrame(updateAndDrawCanvasConfetti);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [stage]);
 
   return (
     <div className="relative min-h-[510px] w-full bg-gradient-to-b from-[#181B22] to-[#0E1014] rounded-3xl overflow-hidden border border-white/5 flex flex-col items-center justify-center p-5 md:p-10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)]">
@@ -463,33 +577,11 @@ export default function DrawAnimator({
       <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.12)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[size:100%_4px,6px_100%] pointer-events-none z-10 opacity-70" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/5 pointer-events-none z-10" />
 
-      {/* Confetti particles layer */}
-      {stage === "revealed" && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
-          {particles.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                position: "absolute",
-                left: `${p.x}%`,
-                top: `${p.y}%`,
-                backgroundColor: p.color,
-                width: `${p.size}px`,
-                height: `${p.size}px`,
-                transform: `rotate(${p.rotation}deg)`,
-                clipPath: p.shape === "triangle"
-                  ? "polygon(50% 0%, 0% 100%, 100% 100%)"
-                  : p.shape === "star"
-                  ? "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"
-                  : p.shape === "circle" ? "50% 50% at 50% 50%" : "none",
-                borderRadius: p.shape === "circle" ? "999px" : "1px",
-                opacity: 0.9,
-                boxShadow: `0 0 10px ${p.color}80`,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {/* High-Performance Confetti particles Canvas layer */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none z-20 rounded-3xl"
+      />
 
       {/* Primary Header Info */}
       <div className="text-center z-20 max-w-lg mb-6 relative">
@@ -552,24 +644,28 @@ export default function DrawAnimator({
                 <div className="absolute top-0 left-0 right-0 h-5 md:h-8 bg-gradient-to-b from-black via-black/50 to-transparent z-10 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 h-5 md:h-8 bg-gradient-to-t from-black via-black/50 to-transparent z-10 pointer-events-none" />
 
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={digit}
-                    initial={{ y: -80, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 80, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 700, damping: 22 }}
-                    className={`font-display text-4xl md:text-7xl font-black font-mono transition-all duration-75 select-none ${
-                      digit === "?" 
-                        ? "text-slate-700" 
-                        : spinningCols[idx] 
-                        ? "text-blue-400 opacity-60 filter blur-[2px] scale-y-110" // kinetic speed blur
-                        : "text-white text-shadow-glow" // high precision glow
-                    }`}
-                  >
+                {spinningCols[idx] ? (
+                  <div className="font-display text-4xl md:text-7xl font-black font-mono select-none text-blue-400 opacity-60 filter blur-[2px] scale-y-110">
                     {digit}
-                  </motion.div>
-                </AnimatePresence>
+                  </div>
+                ) : (
+                  <AnimatePresence mode="popLayout">
+                    <motion.div
+                      key={digit}
+                      initial={{ y: -80, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: 80, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 700, damping: 22 }}
+                      className={`font-display text-4xl md:text-7xl font-black font-mono select-none ${
+                        digit === "?" 
+                          ? "text-slate-700" 
+                          : "text-white text-shadow-glow"
+                      }`}
+                    >
+                      {digit}
+                    </motion.div>
+                  </AnimatePresence>
+                )}
 
                 {/* Laser scan horizontal highlight track indicator */}
                 <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-red-550/25 pointer-events-none z-10" />

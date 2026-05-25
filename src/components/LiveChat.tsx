@@ -311,7 +311,7 @@ export default function LiveChat({ room, playerId, playerName, isAdmin = false }
           placeholder={isLocalUserMuted ? "Você foi silenciado(a) pelo administrador 🔇" : "Mande sua mensagem..."}
           maxLength={240}
           disabled={isSending || isLocalUserMuted}
-          className="flex-1 bg-[#0F1115] border border-white/5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-3.5 py-2 text-xs text-slate-200 outline-none transition-all placeholder:text-slate-650 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-[#0F1115] border border-white/5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-3.5 py-2 text-base md:text-xs text-slate-200 outline-none transition-all placeholder:text-slate-650 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           type="submit"

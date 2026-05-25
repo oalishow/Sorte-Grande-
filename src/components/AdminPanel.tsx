@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Prize, Participant } from "../types";
-import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio, Printer, Trophy, Share2, FileText, Upload, Download, MessageCircle } from "lucide-react";
+import { Gift, Users, Plus, Trash2, Copy, Check, Megaphone, ArrowLeft, RefreshCw, Sparkles, Ticket, Settings, Shield, Radio, Printer, Trophy, Share2, FileText, Upload, Download, MessageCircle, Phone, Shuffle } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
 import LiveChat from "./LiveChat";
-import { firebaseUpdateSettings, firebaseJoinRoom, firebaseImportParticipants } from "../lib/firebase";
+import { firebaseUpdateSettings, firebaseJoinRoom, firebaseImportParticipants, firebaseRemoveParticipant } from "../lib/firebase";
+import { safeStorage, safeSessionStorage } from "../lib/safeStorage";
 
 interface AdminPanelProps {
   room: Room;
@@ -18,6 +19,8 @@ interface AdminPanelProps {
   onResetDrawState: () => Promise<void>;
   onLeaveRoom: () => void;
   appUrl: string;
+  canSwitchRole?: boolean;
+  onSwitchRole?: () => void;
 }
 
 export default function AdminPanel({
@@ -30,6 +33,8 @@ export default function AdminPanel({
   onResetDrawState,
   onLeaveRoom,
   appUrl,
+  canSwitchRole,
+  onSwitchRole,
 }: AdminPanelProps) {
   const [newPrizeName, setNewPrizeName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -38,6 +43,7 @@ export default function AdminPanel({
   // New features state
   const [isQrExpanded, setIsQrExpanded] = useState(false);
   const [isEventFinished, setIsEventFinished] = useState(false);
+  const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
 
   // Memoize reversed participants for performance
   const reversedParticipants = useMemo(() => {
@@ -152,8 +158,8 @@ export default function AdminPanel({
   };
 
   // Check creator/master permission
-  const isCreator = localStorage.getItem(`raffle_room_${room.id}_creator`) === "true" || playerId === room.creatorId;
-  const isMaster = sessionStorage.getItem("master_password") === "7777";
+  const isCreator = safeStorage.getItem(`raffle_room_${room.id}_creator`) === "true" || playerId === room.creatorId;
+  const isMaster = safeSessionStorage.getItem("master_password") === "7777";
   const hasPermission = isCreator || isMaster;
 
   // Custom Confirmation Modal details
@@ -162,11 +168,16 @@ export default function AdminPanel({
   // Classic mode states & updates handler
   const [minInput, setMinInput] = useState(String(room.classicMin ?? 1));
   const [maxInput, setMaxInput] = useState(String(room.classicMax ?? 100));
+  const [startTicketInput, setStartTicketInput] = useState(String(room.ticketStartNumber ?? 100));
 
   React.useEffect(() => {
     setMinInput(String(room.classicMin ?? 1));
     setMaxInput(String(room.classicMax ?? 100));
   }, [room.classicMin, room.classicMax]);
+
+  React.useEffect(() => {
+    setStartTicketInput(String(room.ticketStartNumber ?? 100));
+  }, [room.ticketStartNumber]);
 
   const handleUpdateSettings = async (updates: {
     drawMode?: 'qrcode' | 'classic';
@@ -176,6 +187,11 @@ export default function AdminPanel({
     qrcodeNoRepeat?: boolean;
     clearHistory?: boolean;
     isOpenRoom?: boolean;
+    ticketStartNumber?: number;
+    allowMultipleTickets?: boolean;
+    requireCpf?: boolean;
+    requirePhone?: boolean;
+    ticketAssignmentMode?: 'consecutive' | 'random';
   }) => {
     try {
       await firebaseUpdateSettings(room.id, updates);
@@ -417,6 +433,16 @@ export default function AdminPanel({
 
         {/* Action controls */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {canSwitchRole && onSwitchRole && (
+            <button
+              onClick={onSwitchRole}
+              className="px-4 py-2 bg-amber-600/10 border border-amber-500/30 hover:bg-amber-600/20 text-amber-400 font-bold rounded-xl text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer group shadow-lg shadow-amber-500/5 mr-2"
+              title="Mudar para Visão de Participante"
+            >
+              <Users className="w-4 h-4" /> Visão Participante
+            </button>
+          )}
+
           <button
             onClick={handleCopyLink}
             className="px-4 py-2 bg-blue-600/10 border border-blue-500/30 hover:bg-blue-600/20 text-blue-400 font-bold rounded-xl text-xs md:text-sm flex items-center gap-2 transition-all cursor-pointer group shadow-lg shadow-blue-500/5"
@@ -578,7 +604,7 @@ export default function AdminPanel({
                       value={minInput}
                       onChange={(e) => setMinInput(e.target.value)}
                       onBlur={() => handleUpdateSettings({ classicMin: Number(minInput) || 1 })}
-                      className="w-full bg-[#0F1115] border border-white/10 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 outline-none transition-all font-mono"
+                      className="w-full bg-[#0F1115] border border-white/10 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-base md:text-sm text-slate-200 outline-none transition-all font-mono"
                     />
                   </div>
 
@@ -591,7 +617,7 @@ export default function AdminPanel({
                       value={maxInput}
                       onChange={(e) => setMaxInput(e.target.value)}
                       onBlur={() => handleUpdateSettings({ classicMax: Number(maxInput) || 100 })}
-                      className="w-full bg-[#0F1115] border border-white/10 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 outline-none transition-all font-mono"
+                      className="w-full bg-[#0F1115] border border-white/10 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-base md:text-sm text-slate-200 outline-none transition-all font-mono"
                     />
                   </div>
 
@@ -689,6 +715,131 @@ export default function AdminPanel({
                     onChange={(e) => handleUpdateSettings({ qrcodeNoRepeat: e.target.checked })}
                     className="w-4 h-4 bg-[#0F1115] border-white/10 rounded text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
                   />
+                </div>
+              </div>
+
+              {/* Opção para escolher o estilo / início dos bilhetes */}
+              <div className="w-full mb-2">
+                <div className="flex flex-col gap-1.5 p-3 bg-[#0F1115]/50 border border-white/5 rounded-xl text-left select-none">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-200">Nº de Bilhete Inicial (Estilo)</span>
+                    <span className="text-[10px] text-blue-400 font-mono font-bold">1 a 999 (Padrão: 100)</span>
+                  </div>
+                  <p className="text-[9px] text-slate-500 leading-normal mb-1">
+                    Define o número do primeiro bilhete gerado.
+                  </p>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={startTicketInput}
+                      onChange={(e) => setStartTicketInput(e.target.value)}
+                      onBlur={() => {
+                        const val = Math.max(1, Math.min(999, Number(startTicketInput) || 100));
+                        setStartTicketInput(String(val));
+                        handleUpdateSettings({ ticketStartNumber: val });
+                      }}
+                      className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none transition-all font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* OPÇÃO DE PREVENÇÃO CONTRA FRAUDES / BILHETE ÚNICO */}
+              <div className="w-full mb-2">
+                <div className="flex flex-col gap-2 p-3 bg-[#0F1115]/50 border border-white/5 rounded-xl text-left select-none font-sans">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-amber-500" /> Segurança & Bilhetes
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-slate-500 leading-normal mb-1">
+                    Evite que participantes simulem novas inscrições para coletar novos números.
+                  </p>
+                  
+                  {/* Toggle para Bilhete Único vs Múltiplos */}
+                  <div className="flex items-center justify-between bg-[#0F1115] p-2 rounded-lg border border-white/5 mt-1">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-300">Garantir Bilhete Único</span>
+                      <span className="text-[8px] text-slate-500 leading-none mt-0.5">Apenas 1 por pessoa</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={!(room.allowMultipleTickets === true)}
+                      onChange={(e) => handleUpdateSettings({ allowMultipleTickets: !e.target.checked })}
+                      className="w-3.5 h-3.5 bg-[#0F1115] border border-white/10 rounded text-amber-600 focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Campos adicionais requeridos (apenas se for bilhete único) */}
+                  {!(room.allowMultipleTickets === true) && (
+                    <div className="flex flex-col gap-1.5 mt-1 pl-1.5 border-l-2 border-amber-500/20">
+                      <span className="text-[8px] font-black text-amber-500 uppercase tracking-wider block mb-0.5">Exigir validação adicional:</span>
+                      
+                      <label className="flex items-center justify-between bg-[#0F1115]/80 p-1.5 px-2 rounded-md border border-white/5 cursor-pointer">
+                        <span className="text-[9px] text-slate-400 font-medium">Exigir CPF</span>
+                        <input
+                          type="checkbox"
+                          checked={room.requireCpf === true}
+                          onChange={(e) => handleUpdateSettings({ requireCpf: e.target.checked })}
+                          className="w-3 h-3 bg-[#0F1115] border-white/10 rounded text-amber-600 focus:ring-1 cursor-pointer"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between bg-[#0F1115]/80 p-1.5 px-2 rounded-md border border-white/5 cursor-pointer">
+                        <span className="text-[9px] text-slate-400 font-medium select-none">Exigir Telefone</span>
+                        <input
+                          type="checkbox"
+                          checked={room.requirePhone === true}
+                          onChange={(e) => handleUpdateSettings({ requirePhone: e.target.checked })}
+                          className="w-3 h-3 bg-[#0F1115] border-white/10 rounded text-amber-600 focus:ring-1 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* OPÇÃO DE ORDEM DO BILHETE (CONSECUTIVO VS ALEATÓRIO) */}
+              <div className="w-full mb-2">
+                <div className="flex flex-col gap-2 p-3 bg-[#0F1115]/50 border border-white/5 rounded-xl text-left select-none font-sans">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                      <Shuffle className="w-3.5 h-3.5 text-indigo-400" /> Distribuição dos Bilhetes
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-slate-500 leading-normal mb-1">
+                    Como o número do bilhete do participante será atribuído ao entrar na sala.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-1.5 bg-[#0F1115] p-1 rounded-lg border border-white/5">
+                    <button
+                      onClick={() => handleUpdateSettings({ ticketAssignmentMode: 'consecutive' })}
+                      className={`py-1.5 px-2 text-[9px] font-bold rounded-md transition-all cursor-pointer ${
+                        room.ticketAssignmentMode !== 'random'
+                          ? "bg-indigo-600 border border-indigo-500/35 text-white"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                      }`}
+                    >
+                      Ordem de Entrada
+                    </button>
+                    <button
+                      onClick={() => handleUpdateSettings({ ticketAssignmentMode: 'random' })}
+                      className={`py-1.5 px-2 text-[9px] font-bold rounded-md transition-all cursor-pointer ${
+                        room.ticketAssignmentMode === 'random'
+                          ? "bg-indigo-600 border border-indigo-500/35 text-white"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                      }`}
+                    >
+                      Ordem Aleatória
+                    </button>
+                  </div>
+                  <span className="text-[8px] text-slate-500 leading-normal block font-mono">
+                    {room.ticketAssignmentMode === 'random'
+                      ? "🎲 Bilhete sorteado aleatoriamente entre " + (room.ticketStartNumber ?? 100) + " e 999."
+                      : "📈 Bilhetes gerados consecutivamente a partir de " + (room.ticketStartNumber ?? 100) + "."}
+                  </span>
                 </div>
               </div>
 
@@ -796,7 +947,7 @@ export default function AdminPanel({
                     onChange={(e) => setManualName(e.target.value)}
                     placeholder="Cadastro Manual (Ex: Alison)..."
                     disabled={isSubmittingManual}
-                    className="flex-1 min-w-0 bg-transparent text-xs text-slate-200 placeholder-slate-500 font-sans px-2.5 py-1.5 focus:outline-none border-none"
+                    className="flex-1 min-w-0 bg-transparent text-base md:text-xs text-slate-200 placeholder-slate-500 font-sans px-2.5 py-1.5 focus:outline-none border-none"
                   />
                   <button
                     type="submit"
@@ -839,12 +990,31 @@ export default function AdminPanel({
                             <div className="mx-auto w-7 h-7 bg-[#161920] text-slate-400 rounded-full flex items-center justify-center border border-white/5 font-mono text-xs select-none">
                               {room.participants.length - idx}
                             </div>
-                            <span className="font-sans font-semibold text-slate-200 text-sm truncate">
-                              {p.name}
-                            </span>
+                            <div className="flex flex-col min-w-0 text-left">
+                              <span className="font-sans font-semibold text-slate-200 text-sm truncate">
+                                {p.name}
+                              </span>
+                              {(p.phone || p.cpf) && (
+                                <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5 text-[9px] text-slate-500 font-mono">
+                                  {p.phone && <span>📞 {p.phone}</span>}
+                                  {p.cpf && <span>🪪 CPF: {p.cpf}</span>}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="font-mono text-xs font-bold text-blue-400 bg-[#161920] border border-blue-500/20 py-1 px-2.5 rounded-lg shrink-0">
-                            #{p.ticketNumber}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="font-mono text-xs font-bold text-blue-400 bg-[#161920] border border-blue-500/20 py-1 px-2.5 rounded-lg shrink-0">
+                              #{p.ticketNumber}
+                            </div>
+                            {hasPermission && (
+                              <button
+                                onClick={() => setParticipantToDelete(p)}
+                                className="p-1 px-1.5 text-rose-500 hover:text-rose-455 bg-rose-550/5 hover:bg-rose-550/15 border border-rose-550/10 hover:border-rose-550/20 rounded-md transition-all cursor-pointer shadow-sm"
+                                title="Remover participante"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </motion.div>
                       ))}
@@ -923,7 +1093,7 @@ export default function AdminPanel({
                   value={newPrizeName}
                   onChange={(e) => setNewPrizeName(e.target.value)}
                   placeholder="Ex: Caixa de Bombom 🍫"
-                  className="flex-1 bg-[#0F1115] border border-white/10 focus:border-blue-500 rounded-xl px-3 py-2 text-xs md:text-sm text-slate-200 outline-none transition-all placeholder:text-slate-650"
+                  className="flex-1 bg-[#0F1115] border border-white/10 focus:border-blue-500 rounded-xl px-3 py-2 text-base md:text-xs text-slate-200 outline-none transition-all placeholder:text-slate-655"
                 />
                 <button
                   type="submit"
@@ -1147,9 +1317,9 @@ export default function AdminPanel({
           Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
         </p>
         <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-650 font-mono">
-          <span>Versão: 0.15 (Beta)</span>
+          <span>Versão: 0.16 (Beta)</span>
           <span>•</span>
-          <span>Build: 2026-05-21</span>
+          <span>Build: 2026-05-25</span>
           <span>•</span>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1172,6 +1342,26 @@ export default function AdminPanel({
         cancelText="Voltar"
       />
 
+      {/* CONFIRMATION MODAL TO DELETE PARTICIPANT */}
+      <CustomModal
+        isOpen={participantToDelete !== null}
+        onClose={() => setParticipantToDelete(null)}
+        onConfirm={async () => {
+          if (participantToDelete) {
+            try {
+              await firebaseRemoveParticipant(room.id, participantToDelete.id);
+            } catch (err) {
+              console.error("Erro ao remover participante:", err);
+            }
+          }
+        }}
+        title="Remover Participante?"
+        message={`Esta ação excluirá permanentemente o participante "${participantToDelete?.name}" (Bilhete: #${participantToDelete?.ticketNumber}) deste sorteio.\n\nEles serão notificados imediatamente se estiverem online e não poderão reentrar na sala. Tem certeza?`}
+        type="confirm"
+        confirmText="Sim, Remover"
+        cancelText="Voltar"
+      />
+
       {/* EXPANDED QR CODE OVERLAY */}
       <AnimatePresence>
         {isQrExpanded && (
@@ -1181,7 +1371,8 @@ export default function AdminPanel({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsQrExpanded(false)}
-              className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm cursor-pointer"
+              role="button"
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -1371,7 +1562,8 @@ export default function AdminPanel({
               onClick={() => {
                 if (!isImporting) setIsImportModalOpen(false);
               }}
-              className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm cursor-pointer"
+              role="button"
             />
 
             <motion.div
@@ -1417,19 +1609,22 @@ export default function AdminPanel({
                   </p>
                 </div>
 
-                <div className="bg-[#0F1115]/80 border border-dashed border-white/10 hover:border-blue-500/30 p-4 rounded-2xl flex flex-col items-center justify-center text-center transition-all min-h-[110px] relative">
+                <label
+                  htmlFor="file-import-uploader"
+                  className="bg-[#0F1115]/80 border border-dashed border-white/10 hover:border-blue-500/30 p-4 rounded-2xl flex flex-col items-center justify-center text-center transition-all min-h-[110px] relative cursor-pointer block"
+                >
                   <input
                     type="file"
                     accept=".csv,.txt"
                     onChange={handleFileUpload}
                     id="file-import-uploader"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    className="absolute inset-0 opacity-0 cursor-pointer pointer-events-none"
                     disabled={isImporting}
                   />
                   <FileText className="w-6 h-6 text-slate-500 mb-1.5" />
                   <span className="text-xs text-slate-350 font-bold block font-sans">Selecionar Arquivo (.csv / .txt)</span>
-                  <span className="text-[10px] text-slate-500 font-sans mt-0.5">Arraste aqui ou clique para buscar</span>
-                </div>
+                  <span className="text-[10px] text-slate-500 font-sans mt-0.5">Arraste aqui ou toque para buscar</span>
+                </label>
               </div>
 
               <form onSubmit={handleBulkImport} className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -1445,7 +1640,7 @@ export default function AdminPanel({
                     onChange={(e) => setBulkText(e.target.value)}
                     placeholder="Alison Santos&#10;Beatriz Souza&#10;Carlos Eduardo, ticket_id"
                     disabled={isImporting}
-                    className="flex-1 w-full bg-[#0F1115] text-slate-100 placeholder-slate-600 font-mono text-sm p-4 rounded-2xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 border border-white/10 resize-none overflow-y-auto block"
+                    className="flex-1 w-full bg-[#0F1115] text-slate-100 placeholder-slate-600 font-mono text-base md:text-sm p-4 rounded-2xl focus:outline-none focus:ring-1 focus:ring-blue-500/50 border border-white/10 resize-none overflow-y-auto block"
                   />
                   
                   {/* Participant count badge floating on the editor */}

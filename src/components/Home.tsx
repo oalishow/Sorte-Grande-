@@ -5,6 +5,7 @@ import VouGanheiLogo from "./VouGanheiLogo";
 import CustomModal from "./CustomModal";
 import { apiFetch } from "../lib/api";
 import { firebaseSubscribeOpenRooms } from "../lib/firebase";
+import { safeStorage } from "../lib/safeStorage";
 
 interface HomeProps {
   onCreateRoom: (roomName: string, isOpenRoom?: boolean) => void;
@@ -50,7 +51,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
   // Load recent rooms from localStorage
   useEffect(() => {
     try {
-      const recentsStr = localStorage.getItem("raffle_recent_rooms");
+      const recentsStr = safeStorage.getItem("raffle_recent_rooms");
       if (recentsStr) {
         const parsed = JSON.parse(recentsStr);
         if (Array.isArray(parsed)) {
@@ -67,7 +68,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
     try {
       const updated = recentRooms.filter(r => r.id !== idToDelete);
       setRecentRooms(updated);
-      localStorage.setItem("raffle_recent_rooms", JSON.stringify(updated));
+      safeStorage.setItem("raffle_recent_rooms", JSON.stringify(updated));
     } catch (err) {
       console.error("Erro ao remover sala recente do histórico:", err);
     }
@@ -294,7 +295,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
                     value={roomName}
                     onChange={(e) => setRoomName(e.target.value)}
                     placeholder="Ex: Festa da Empresa 2026, Sorteio de Natal"
-                    className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-sm text-slate-200 outline-none transition-all placeholder:text-slate-600"
+                    className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-base md:text-sm text-slate-200 outline-none transition-all placeholder:text-slate-600"
                   />
                   <div className="absolute right-3.5 top-3.5 text-slate-600">
                     <Sparkles className="w-5 h-5 text-blue-500" />
@@ -452,7 +453,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
 
                   <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                     {recentRooms.map((r) => {
-                      const isCreator = localStorage.getItem(`raffle_room_${r.id}_creator`) === "true";
+                      const isCreator = safeStorage.getItem(`raffle_room_${r.id}_creator`) === "true";
                       return (
                         <div
                           key={r.id}
@@ -583,7 +584,7 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
           <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
             <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
             <h3 className="font-display text-xs font-extrabold uppercase tracking-wider text-slate-300">
-              Novidades da Versão 0.15
+              Novidades da Versão 0.16
             </h3>
             <span className="ml-auto text-[9px] font-mono font-bold bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
               PWA ATIVO
@@ -593,25 +594,25 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
             <div className="flex items-start gap-2">
               <span className="text-emerald-400 font-bold mt-0.5">•</span>
               <p>
-                <strong className="text-slate-200">Salas Abertas vs. Fechadas:</strong> Crie salas públicas que aparecem listadas automaticamente para entrada rápida de qualquer smartphone conectado, ou opte pela segurança tradicional com código.
+                <strong className="text-slate-200">Sorteio Super Leve (Visual Canvas):</strong> Recriação completa da física e renderização do confete utilizando HTML5 Canvas e Javascript Refs. Sem gargalos gráficos, mesmo com centenas de sorteios acumulados!
               </p>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-amber-500 font-bold mt-0.5">•</span>
               <p>
-                <strong className="text-slate-200">Suporte Modo Claro de Cores:</strong> Correções visuais meticulosas no painel de sorteio, tickets neon e modal do ganhador para garantir legibilidade ideal sob ambientes ensolarados.
+                <strong className="text-slate-200">Intervalo de Bilhete Personalizável:</strong> Escolha livremente o estilo dos bilhetes. Pode iniciar a numeração a partir do 100 (padrão) ou customizar para qualquer faixa de 1 até 999.
               </p>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-blue-400 font-bold mt-0.5">•</span>
               <p>
-                <strong className="text-slate-200">Build Oficial Realizado em 21/05/2026:</strong> Versão consolidada com correções completas, desempenho refinado de carregamento e design card de destaques no painel inicial.
+                <strong className="text-slate-200">Exclusão e Moderação de Participantes:</strong> Administradores e donos de sala agora podem remover usuários indesejados. Participantes online recebem alertas ao vivo instantaneamente através de um modal informativo.
               </p>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-purple-400 font-bold mt-0.5">•</span>
               <p>
-                <strong className="text-slate-200">Nova Logo 3D:</strong> Identidade reformulada com um troféu reluzente de alta definição para celebrar cada vitória!
+                <strong className="text-slate-200">Salas Abertas vs. Fechadas:</strong> Crie salas públicas que aparecem listadas automaticamente para entrada rápida de qualquer smartphone conectado.
               </p>
             </div>
           </div>
@@ -728,9 +729,9 @@ export default function Home({ onCreateRoom, onJoinRoom, isLoading, onGoToMaster
             Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
           </p>
           <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
-            <span>Versão: 0.15 (Beta)</span>
+            <span>Versão: 0.16 (Beta)</span>
             <span>•</span>
-            <span>Build: 2026-05-21</span>
+            <span>Build: 2026-05-25</span>
             <span>•</span>
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

@@ -18,6 +18,7 @@ import {
 } from "./lib/firebase";
 import CountdownAnimator from "./components/CountdownAnimator";
 import { RefreshCw, ArrowLeft, AlertCircle, Sun, Moon, Wifi, WifiOff } from "lucide-react";
+import { safeStorage, safeSessionStorage } from "./lib/safeStorage";
 
 export default function App() {
   const [page, setPage] = useState<"home" | "room" | "master">("home");
@@ -31,7 +32,7 @@ export default function App() {
 
   // Dark/Light Theme management
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    return (localStorage.getItem("theme") as "dark" | "light") || "dark";
+    return (safeStorage.getItem("theme") as "dark" | "light") || "dark";
   });
 
   // Browser offline/online network status tracker
@@ -41,7 +42,7 @@ export default function App() {
     const root = document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
-    localStorage.setItem("theme", theme);
+    safeStorage.setItem("theme", theme);
   }, [theme]);
 
   useEffect(() => {
@@ -88,10 +89,10 @@ export default function App() {
   // Initialize client routing & player state
   useEffect(() => {
     // 1. Generate or retrieve an immutable player ID for this user session
-    let id = localStorage.getItem("raffle_player_id");
+    let id = safeStorage.getItem("raffle_player_id");
     if (!id) {
       id = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem("raffle_player_id", id);
+      safeStorage.setItem("raffle_player_id", id);
     }
     setPlayerId(id);
 
@@ -108,10 +109,10 @@ export default function App() {
         // Define users credentials (creator vs regular player)
         const urlParams = new URLSearchParams(window.location.search);
         const forceParticipant = urlParams.get("role") === "participant";
-        const isCreator = localStorage.getItem(`raffle_room_${parsedRoomId}_creator`) === "true" && !forceParticipant;
+        const isCreator = safeStorage.getItem(`raffle_room_${parsedRoomId}_creator`) === "true" && !forceParticipant;
         
         // Admin role is only allowed if they are the creator OR if they have the master password
-        const hasMasterPower = sessionStorage.getItem("master_password") === "7777";
+        const hasMasterPower = safeSessionStorage.getItem("master_password") === "7777";
         const isAdminQuery = urlParams.get("role") === "admin" && hasMasterPower;
         
         setRole(isCreator || isAdminQuery ? "admin" : "participant");
@@ -138,31 +139,38 @@ export default function App() {
   useEffect(() => {
     if (page !== "room" || !roomId) return;
 
-    const unsubscribe = firebaseSubscribeRoom(roomId, (room) => {
-      if (room) {
-        setRoomState(room);
-        setError(null);
-        
-        // Guard into recently joined rooms for single-click rejoin
-        try {
-          const recentsStr = localStorage.getItem("raffle_recent_rooms");
-          let recents = recentsStr ? JSON.parse(recentsStr) : [];
-          if (!Array.isArray(recents)) recents = [];
-          recents = recents.filter((r: any) => r.id !== room.id);
-          recents.unshift({
-            id: room.id,
-            name: room.name,
-            joinedAt: Date.now()
-          });
-          recents = recents.slice(0, 8); // Store up to 8 rooms
-          localStorage.setItem("raffle_recent_rooms", JSON.stringify(recents));
-        } catch (e) {
-          console.error("Erro ao atualizar histórico de salas:", e);
+    const unsubscribe = firebaseSubscribeRoom(
+      roomId, 
+      (room) => {
+        if (room) {
+          setRoomState(room);
+          setError(null);
+          
+          // Guard into recently joined rooms for single-click rejoin
+          try {
+            const recentsStr = safeStorage.getItem("raffle_recent_rooms");
+            let recents = recentsStr ? JSON.parse(recentsStr) : [];
+            if (!Array.isArray(recents)) recents = [];
+            recents = recents.filter((r: any) => r.id !== room.id);
+            recents.unshift({
+              id: room.id,
+              name: room.name,
+              joinedAt: Date.now()
+            });
+            recents = recents.slice(0, 8); // Store up to 8 rooms
+            safeStorage.setItem("raffle_recent_rooms", JSON.stringify(recents));
+          } catch (e) {
+            console.error("Erro ao atualizar histórico de salas:", e);
+          }
+        } else {
+          setError("Sala de sorteio não encontrada. Ela pode ter expirado ou sido encerrada.");
         }
-      } else {
-        setError("Sala de sorteio não encontrada. Ela pode ter expirado ou sido encerrada.");
+      },
+      (err) => {
+        console.error("Erro na inscrição em tempo real:", err);
+        setError(`Erro de conexão com o banco em tempo real: ${err.message || String(err)}`);
       }
-    });
+    );
 
     return () => {
       unsubscribe();
@@ -182,7 +190,7 @@ export default function App() {
       const newRoom = await firebaseCreateRoom(roomName, playerId, isOpenRoom);
       
       // Store Creator ownership flags in browser to avoid logins
-      localStorage.setItem(`raffle_room_${newRoom.id}_creator`, "true");
+      safeStorage.setItem(`raffle_room_${newRoom.id}_creator`, "true");
       setRoomState(newRoom);
       
       navigateTo(`/room/${newRoom.id}`);
@@ -197,10 +205,11 @@ export default function App() {
     navigateTo(`/room/${code.toUpperCase()}`);
   };
 
-  const handleJoinParticipant = async (name: string) => {
+  const handleJoinParticipant = async (name: string, phone?: string, cpf?: string, playerIdSuffix?: string) => {
     setError(null);
     try {
-      await firebaseJoinRoom(roomId, name, playerId);
+      const targetPlayerId = playerIdSuffix ? playerId + playerIdSuffix : playerId;
+      await firebaseJoinRoom(roomId, name, targetPlayerId, phone, cpf);
     } catch (err: any) {
       throw new Error(err.message || "Não foi possível participar do sorteio.");
     }
@@ -258,9 +267,28 @@ export default function App() {
     navigateTo("/");
   };
 
+  const handleSwitchRole = (newRole: "admin" | "participant") => {
+    if (!roomState) return;
+    const currentUrl = new URL(window.location.href);
+    if (newRole === "participant") {
+      currentUrl.searchParams.set("role", "participant");
+    } else {
+      currentUrl.searchParams.set("role", "admin");
+    }
+    window.history.pushState({}, "", currentUrl.toString());
+    setRole(newRole);
+  };
+
   // Error overlay block
   const renderContent = () => {
-    if (error && page === "room") {
+    let canSwitchRole = false;
+    if (roomState) {
+      const isCreator = safeStorage.getItem(`raffle_room_${roomState.id}_creator`) === "true";
+      const hasMasterPower = safeSessionStorage.getItem("master_password") === "7777";
+      canSwitchRole = isCreator || hasMasterPower;
+    }
+
+    if (error) {
       return (
         <div className="min-h-screen bg-[#0F1115] text-[#E2E8F0] flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full bg-[#161920] border border-white/5 p-8 rounded-2xl text-center shadow-xl">
@@ -302,6 +330,8 @@ export default function App() {
             onResetDrawState={handleResetDrawState}
             onLeaveRoom={handleLeaveRoom}
             appUrl={appUrl}
+            canSwitchRole={canSwitchRole}
+            onSwitchRole={() => handleSwitchRole("participant")}
           />
         );
       }
@@ -312,6 +342,8 @@ export default function App() {
           playerId={playerId}
           onJoin={handleJoinParticipant}
           onLeaveRoom={handleLeaveRoom}
+          canSwitchRole={canSwitchRole}
+          onSwitchRole={() => handleSwitchRole("admin")}
         />
       );
     }

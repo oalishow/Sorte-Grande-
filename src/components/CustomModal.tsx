@@ -33,7 +33,10 @@ export default function CustomModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={type === "info" || type === "success" ? onClose : undefined}
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+            className={`absolute inset-0 bg-slate-950/70 backdrop-blur-sm ${
+              type === "info" || type === "success" ? "cursor-pointer" : ""
+            }`}
+            role={type === "info" || type === "success" ? "button" : undefined}
           />
 
           {/* Modal Card */}

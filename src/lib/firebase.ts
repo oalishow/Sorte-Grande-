@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { 
-  getFirestore, doc, getDoc, setDoc, updateDoc, 
+  initializeFirestore, doc, getDoc, setDoc, updateDoc, 
   deleteDoc, collection, getDocs, onSnapshot, 
   writeBatch, query, where, orderBy, limit
 } from 'firebase/firestore';
@@ -8,7 +8,9 @@ import firebaseConfig from '../firebase-applet-config.json';
 import { Room, Participant, Prize, DrawHistoryEntry } from '../types';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true
+}, firebaseConfig.firestoreDatabaseId || undefined);
 
 export enum OperationType {
   CREATE = 'create',
@@ -73,7 +75,92 @@ export async function firebaseCreateRoom(roomName: string, creatorId: string, is
     qrcodeNoRepeat: true,
     classicDrawnNumbers: [],
     isOpenRoom: !!isOpenRoom,
+    ticketStartNumber: 100,
+    requirePhone: false,
+    requireCpf: false,
+    allowMultipleTickets: false,
+    ticketAssignmentMode: "consecutive",
     drawHistory: [],
+    removedParticipantIds: [],
+  };
+
+  try {
+    const docRef = doc(db, 'rooms', roomId);
+    await setDoc(docRef, newRoom);
+    return newRoom;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `rooms/${roomId}`);
+  }
+}
+
+export async function firebaseCreateTestRoom(roomName: string): Promise<Room> {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let roomId = "";
+  for (let i = 0; i < 6; i++) {
+    roomId += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  const fakeNames = [
+    "Ana Souza",
+    "Bruno Lima",
+    "Carla Diaz",
+    "Daniel Rocha",
+    "Eduarda Melo",
+    "Felipe Santos",
+    "Gabriela Abreu",
+    "Hugo Oliveira"
+  ];
+
+  const participants: Participant[] = fakeNames.map((name, idx) => ({
+    id: `fake_participant_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+    name,
+    ticketNumber: 100 + idx,
+    joinedAt: Date.now() - (10 - idx) * 1000,
+    phone: `(11) 99999-000${idx}`,
+    cpf: `123.456.789-0${idx}`
+  }));
+
+  const fakePrizes = [
+    "Kit Caneca e Chocolate 🍫☕",
+    "Garrafa Térmica Premium 🥤",
+    "Fone de Ouvido Bluetooth 🎧",
+    "Carregador Portátil Rápido 🔋",
+    "Caixa de Som Inteligente 🔊"
+  ];
+
+  const prizes: Prize[] = fakePrizes.map((name, idx) => ({
+    id: `prize_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+    name,
+    winner: null,
+    drawnAt: null
+  }));
+
+  const newRoom: Room = {
+    id: roomId,
+    name: roomName,
+    creatorId: "master_test_id",
+    participants,
+    prizes,
+    status: "waiting",
+    activePrizeId: null,
+    currentWinner: null,
+    currentWinningNumber: null,
+    drawingStartedAt: null,
+    createdAt: Date.now(),
+    drawMode: "qrcode",
+    classicMin: 1,
+    classicMax: 100,
+    classicNoRepeat: true,
+    qrcodeNoRepeat: true,
+    classicDrawnNumbers: [],
+    isOpenRoom: true,
+    ticketStartNumber: 100,
+    requirePhone: false,
+    requireCpf: false,
+    allowMultipleTickets: false,
+    ticketAssignmentMode: "consecutive",
+    drawHistory: [],
+    removedParticipantIds: [],
   };
 
   try {
@@ -99,7 +186,13 @@ export async function firebaseGetRoom(roomId: string): Promise<Room> {
   }
 }
 
-export async function firebaseJoinRoom(roomId: string, name: string, playerId: string): Promise<Participant> {
+export async function firebaseJoinRoom(
+  roomId: string, 
+  name: string, 
+  playerId: string,
+  phone?: string,
+  cpf?: string
+): Promise<Participant> {
   const upperCode = roomId.trim().toUpperCase();
   try {
     const docRef = doc(db, 'rooms', upperCode);
@@ -109,22 +202,106 @@ export async function firebaseJoinRoom(roomId: string, name: string, playerId: s
     }
     const room = snap.data() as Room;
 
-    const existingParticipant = room.participants.find((p) => p.id === playerId);
-    if (existingParticipant) {
-      return existingParticipant;
+    if (room.removedParticipantIds && room.removedParticipantIds.includes(playerId)) {
+      throw new Error("Você foi removido desta sala pelo administrador e não pode reentrar.");
     }
 
-    const nextTicketNumber = 101 + room.participants.length;
+    const allowMultiple = room.allowMultipleTickets === true;
+
+    if (!allowMultiple) {
+      if (room.requireCpf && cpf) {
+        const cleanedCpf = cpf.replace(/\D/g, "");
+        const cpfExists = room.participants.some(
+          p => p.cpf && p.cpf.replace(/\D/g, "") === cleanedCpf && p.id !== playerId
+        );
+        if (cpfExists) {
+          throw new Error("Este CPF já está cadastrado nesta sala.");
+        }
+      }
+      if (room.requirePhone && phone) {
+        const cleanedPhone = phone.replace(/\D/g, "");
+        const phoneExists = room.participants.some(
+          p => p.phone && p.phone.replace(/\D/g, "") === cleanedPhone && p.id !== playerId
+        );
+        if (phoneExists) {
+          throw new Error("Este telefone já está cadastrado nesta sala.");
+        }
+      }
+
+      const existingParticipant = room.participants.find((p) => p.id === playerId);
+      if (existingParticipant) {
+        return existingParticipant;
+      }
+    }
+
+    // Determine Ticket Number
+    let nextTicketNumber: number;
+    if (room.ticketAssignmentMode === 'random') {
+      const start = room.ticketStartNumber ?? 100;
+      const end = 999;
+      const usedTickets = new Set(room.participants.map(p => p.ticketNumber));
+      const availableTickets: number[] = [];
+      for (let i = start; i <= end; i++) {
+        if (!usedTickets.has(i)) {
+          availableTickets.push(i);
+        }
+      }
+      if (availableTickets.length === 0) {
+        throw new Error(`Não há números de bilhete livres na faixa de ${start} a 999.`);
+      }
+      const randIdx = Math.floor(Math.random() * availableTickets.length);
+      nextTicketNumber = availableTickets[randIdx];
+    } else {
+      nextTicketNumber = (room.ticketStartNumber ?? 100) + room.participants.length;
+      if (nextTicketNumber > 999) {
+        throw new Error("Limite de bilhetes (999) atingido para esta faixa.");
+      }
+    }
+
     const newParticipant: Participant = {
       id: playerId,
       name: name.trim(),
       ticketNumber: nextTicketNumber,
       joinedAt: Date.now(),
+      ...(phone ? { phone: phone.trim() } : {}),
+      ...(cpf ? { cpf: cpf.trim() } : {})
     };
 
     const updatedParticipants = [...room.participants, newParticipant];
     await updateDoc(docRef, { participants: updatedParticipants });
     return newParticipant;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `rooms/${upperCode}`);
+    throw err;
+  }
+}
+
+export async function firebaseRemoveParticipant(roomId: string, participantId: string): Promise<Room> {
+  const upperCode = roomId.trim().toUpperCase();
+  try {
+    const docRef = doc(db, 'rooms', upperCode);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      throw new Error("Sala não encontrada.");
+    }
+    const room = snap.data() as Room;
+
+    const updatedParticipants = room.participants.filter(p => p.id !== participantId);
+    const removedParticipantIds = room.removedParticipantIds || [];
+    if (!removedParticipantIds.includes(participantId)) {
+      removedParticipantIds.push(participantId);
+    }
+
+    await updateDoc(docRef, {
+      participants: updatedParticipants,
+      removedParticipantIds
+    });
+
+    return {
+      ...room,
+      participants: updatedParticipants,
+      removedParticipantIds
+    };
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `rooms/${upperCode}`);
   }
@@ -140,7 +317,7 @@ export async function firebaseImportParticipants(roomId: string, names: string[]
     }
     const room = snap.data() as Room;
 
-    let startTicket = 101 + room.participants.length;
+    let startTicket = (room.ticketStartNumber ?? 100) + room.participants.length;
     const newParticipants: Participant[] = [];
 
     names.forEach((name, idx) => {
@@ -220,6 +397,11 @@ export async function firebaseUpdateSettings(roomId: string, updates: Partial<Ro
     if (updates.classicNoRepeat !== undefined) updatedFields.classicNoRepeat = updates.classicNoRepeat;
     if (updates.qrcodeNoRepeat !== undefined) updatedFields.qrcodeNoRepeat = updates.qrcodeNoRepeat;
     if (updates.isOpenRoom !== undefined) updatedFields.isOpenRoom = updates.isOpenRoom;
+    if (updates.ticketStartNumber !== undefined) updatedFields.ticketStartNumber = Number(updates.ticketStartNumber);
+    if (updates.requirePhone !== undefined) updatedFields.requirePhone = updates.requirePhone;
+    if (updates.requireCpf !== undefined) updatedFields.requireCpf = updates.requireCpf;
+    if (updates.allowMultipleTickets !== undefined) updatedFields.allowMultipleTickets = updates.allowMultipleTickets;
+    if (updates.ticketAssignmentMode !== undefined) updatedFields.ticketAssignmentMode = updates.ticketAssignmentMode;
     
     if ((updates as any).clearHistory) {
       updatedFields.classicDrawnNumbers = [];
@@ -476,6 +658,7 @@ export function firebaseSubscribeAllRooms(callback: (rooms: Room[]) => void) {
       callback(rooms);
     }, (err) => {
       // Fallback if index not ready
+      console.warn("Primary subscribe failed, attempting fallback:", err);
       const qAll = collection(db, 'rooms');
       return onSnapshot(qAll, (snap2) => {
         const rooms2: Room[] = [];
@@ -484,6 +667,8 @@ export function firebaseSubscribeAllRooms(callback: (rooms: Room[]) => void) {
           if (!r.deletedAt) rooms2.push(r);
         });
         callback(rooms2.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+      }, (fallbackErr) => {
+        console.error("Fallback subscribe failed:", fallbackErr);
       });
     });
   } catch (err) {
@@ -503,6 +688,7 @@ export function firebaseSubscribeTrashedRooms(callback: (rooms: Room[]) => void)
       snap.forEach(d => rooms.push(d.data() as Room));
       callback(rooms);
     }, (err) => {
+      console.warn("Primary trash subscribe failed, attempting fallback:", err);
       const qAll = collection(db, 'rooms');
       return onSnapshot(qAll, (snap2) => {
         const rooms2: Room[] = [];
@@ -511,6 +697,8 @@ export function firebaseSubscribeTrashedRooms(callback: (rooms: Room[]) => void)
           if (r.deletedAt) rooms2.push(r);
         });
         callback(rooms2);
+      }, (fallbackErr) => {
+        console.error("Fallback trash subscribe failed:", fallbackErr);
       });
     });
   } catch (err) {
@@ -604,6 +792,7 @@ export function firebaseSubscribeOpenRooms(callback: (rooms: Room[]) => void) {
       callback(openRooms);
     }, (err) => {
       // Fallback if index not ready
+      console.warn("Primary open rooms subscribe failed, attempting fallback:", err);
       const qAll = collection(db, 'rooms');
       return onSnapshot(qAll, (snap2) => {
         const openRooms: Room[] = [];
@@ -612,6 +801,8 @@ export function firebaseSubscribeOpenRooms(callback: (rooms: Room[]) => void) {
           if (r.isOpenRoom && !r.deletedAt) openRooms.push(r);
         });
         callback(openRooms);
+      }, (fallbackErr) => {
+        console.error("Fallback open rooms subscribe failed:", fallbackErr);
       });
     });
   } catch (err) {
@@ -619,7 +810,7 @@ export function firebaseSubscribeOpenRooms(callback: (rooms: Room[]) => void) {
   }
 }
 
-export function firebaseSubscribeRoom(roomId: string, callback: (room: Room | null) => void) {
+export function firebaseSubscribeRoom(roomId: string, callback: (room: Room | null) => void, onError?: (err: any) => void) {
   const upperCode = roomId.trim().toUpperCase();
   const docRef = doc(db, 'rooms', upperCode);
   return onSnapshot(docRef, (snap) => {
@@ -629,7 +820,11 @@ export function firebaseSubscribeRoom(roomId: string, callback: (room: Room | nu
       callback(null);
     }
   }, (err) => {
-    handleFirestoreError(err, OperationType.GET, `rooms/${upperCode}`);
+    if (onError) {
+      onError(err);
+    } else {
+      handleFirestoreError(err, OperationType.GET, `rooms/${upperCode}`);
+    }
   });
 }
 

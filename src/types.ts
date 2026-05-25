@@ -3,6 +3,8 @@ export interface Participant {
   name: string;
   ticketNumber: number;
   joinedAt: number;
+  phone?: string;
+  cpf?: string;
 }
 
 export interface Prize {
@@ -41,6 +43,12 @@ export interface Room {
   qrcodeNoRepeat?: boolean;
   classicDrawnNumbers?: number[];
   isOpenRoom?: boolean;
+  ticketStartNumber?: number;
+  removedParticipantIds?: string[];
+  requirePhone?: boolean;
+  requireCpf?: boolean;
+  allowMultipleTickets?: boolean;
+  ticketAssignmentMode?: 'consecutive' | 'random';
   drawHistory?: DrawHistoryEntry[];
   messages?: ChatMessage[];
   mutedUserIds?: string[];

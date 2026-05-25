@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Room, Participant, Prize } from "../types";
-import { Gift, Ticket, User, Users, Sparkles, LogOut, ArrowLeft, Heart, CheckCircle, Radio } from "lucide-react";
+import { Gift, Ticket, User, Users, Sparkles, LogOut, ArrowLeft, Heart, CheckCircle, Radio, Phone, Shield } from "lucide-react";
 import DrawAnimator from "./DrawAnimator";
 import VouGanheiLogo from "./VouGanheiLogo";
 import TicketRevealAnimation from "./TicketRevealAnimation";
 import { audioService } from "../utils/audio";
 import LiveChat from "./LiveChat";
+import CustomModal from "./CustomModal";
+import { safeSessionStorage } from "../lib/safeStorage";
 
 interface ParticipantPanelProps {
   room: Room;
   playerId: string;
-  onJoin: (name: string) => Promise<void>;
+  onJoin: (name: string, phone?: string, cpf?: string, playerIdSuffix?: string) => Promise<void>;
   onLeaveRoom: () => void;
+  canSwitchRole?: boolean;
+  onSwitchRole?: () => void;
 }
 
 export default function ParticipantPanel({
@@ -20,25 +24,60 @@ export default function ParticipantPanel({
   playerId,
   onJoin,
   onLeaveRoom,
+  canSwitchRole,
+  onSwitchRole,
 }: ParticipantPanelProps) {
   const [nameInput, setNameInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [cpfInput, setCpfInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isRemovedModalOpen, setIsRemovedModalOpen] = useState(false);
 
   const [drawFinished, setDrawFinished] = useState(false);
   const [showJoinReveal, setShowJoinReveal] = useState(false);
   const [hasShownReveal, setHasShownReveal] = useState(() => {
-    return sessionStorage.getItem(`revealed_${playerId}`) === 'true';
+    return safeSessionStorage.getItem(`revealed_${playerId}`) === 'true';
   });
 
+  // Find all tickets belonging to this player (including multi-ticket child IDs)
+  const myTickets = room.participants.filter(
+    (p) => p.id === playerId || p.id.startsWith(playerId + "_")
+  );
+  
+  // Use the first ticket as the primary 'me' object for legacy compatibility in layouts
+  const me = myTickets.length > 0 ? myTickets[0] : null;
+
+  const formatCPF = (value: string) => {
+    const raw = value.replace(/\D/g, "");
+    return raw
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+      .substring(0, 14);
+  };
+
+  const formatPhone = (value: string) => {
+    const raw = value.replace(/\D/g, "");
+    if (raw.length <= 10) {
+      return raw.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2").substring(0, 14);
+    }
+    return raw.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2").substring(0, 15);
+  };
+
   useEffect(() => {
-    const me = room.participants.find((p) => p.id === playerId);
+    if (room.removedParticipantIds && room.removedParticipantIds.includes(playerId)) {
+      setIsRemovedModalOpen(true);
+    }
+  }, [room.removedParticipantIds, playerId]);
+
+  useEffect(() => {
     if (me && !hasShownReveal) {
       setShowJoinReveal(true);
       setHasShownReveal(true);
-      sessionStorage.setItem(`revealed_${playerId}`, 'true');
+      safeSessionStorage.setItem(`revealed_${playerId}`, 'true');
     }
-  }, [room.participants, hasShownReveal, playerId]);
+  }, [room.participants, hasShownReveal, playerId, me]);
 
   useEffect(() => {
     // Reset drawFinished when status changes to drawing or when the winning number/prize changes
@@ -57,8 +96,6 @@ export default function ParticipantPanel({
     return true;
   });
 
-  const me = room.participants.find((p) => p.id === playerId);
-
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -66,11 +103,19 @@ export default function ParticipantPanel({
       setErrorMsg("Por favor, digite seu nome.");
       return;
     }
+    if (room.requireCpf && cpfInput.length < 14) {
+      setErrorMsg("Por favor, preencha o documento do CPF completo.");
+      return;
+    }
+    if (room.requirePhone && phoneInput.length < 14) {
+      setErrorMsg("Por favor, preencha o número de telefone completo.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       // Play startup cue to unlock browser AudioContext on user interaction
       audioService.playCountdownStart();
-      await onJoin(nameInput.trim());
+      await onJoin(nameInput.trim(), phoneInput, cpfInput);
     } catch (err: any) {
       setErrorMsg(err.message || "Erro ao entrar no sorteio.");
     } finally {
@@ -88,6 +133,15 @@ export default function ParticipantPanel({
 
   return (
     <div className="min-h-screen bg-[#0F1115] text-[#E2E8F0] flex flex-col p-4 md:p-6 font-sans relative overflow-x-hidden">
+      {/* Removed Warning Modal */}
+      <CustomModal
+        isOpen={isRemovedModalOpen}
+        onClose={onLeaveRoom}
+        title="Removido da Sala"
+        message="Atenção: Você foi removido desta sala pelo administrador do sorteio."
+        type="info"
+      />
+
       {/* Join Reveal Animation Overlay */}
       <AnimatePresence>
         {showJoinReveal && me && (
@@ -104,14 +158,34 @@ export default function ParticipantPanel({
       <div className="absolute bottom-10 right-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
 
       {/* Embedded Event Header */}
-      <header className="max-w-md w-full mx-auto flex items-center justify-between py-4 border-b border-white/10 mb-6 shrink-0">
-        <button
-          onClick={onLeaveRoom}
-          className="p-2 text-[#E2E8F0] hover:text-white bg-[#161920] border border-white/5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4" /> Sair
-        </button>
+      <header className="max-w-md w-full mx-auto flex items-center justify-between py-4 border-b border-white/10 mb-6 shrink-0 relative">
+        <div className="flex gap-2">
+          <button
+            onClick={onLeaveRoom}
+            className="p-2 text-[#E2E8F0] hover:text-white bg-[#161920] border border-white/5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+            title="Sair da sala"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          
+          {canSwitchRole && onSwitchRole && (
+             <button
+              onClick={onSwitchRole}
+              className="px-3 py-2 text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold whitespace-nowrap hidden sm:flex"
+            >
+              Painel Admin
+            </button>
+          )}
+        </div>
         <div className="text-right">
+          {canSwitchRole && onSwitchRole && (
+             <button
+              onClick={onSwitchRole}
+              className="px-3 py-1 mb-1 text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[10px] font-bold block sm:hidden ml-auto"
+            >
+              Painel Admin
+            </button>
+          )}
           <span className="font-display font-black text-sm text-white tracking-tight truncate block max-w-[155px]">
             {room.name}
           </span>
@@ -163,13 +237,55 @@ export default function ParticipantPanel({
                       value={nameInput}
                       onChange={(e) => setNameInput(e.target.value)}
                       placeholder="Ex: João Silva"
-                      className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-sm text-slate-200 outline-none transition-all placeholder:text-slate-700"
+                      className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-base md:text-sm text-slate-200 outline-none transition-all placeholder:text-slate-700"
                     />
                     <div className="absolute right-3.5 top-3.5 text-slate-600">
                       <User className="w-4 h-4" />
                     </div>
                   </div>
                 </div>
+
+                {room.requireCpf && (
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                      CPF Requerido
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={cpfInput}
+                        onChange={(e) => setCpfInput(formatCPF(e.target.value))}
+                        placeholder="000.000.000-00"
+                        className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-base md:text-sm text-slate-200 outline-none transition-all placeholder:text-slate-700 font-mono"
+                      />
+                      <div className="absolute right-3.5 top-3.5 text-slate-600">
+                        <span className="text-[10px] font-bold font-mono">CPF</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {room.requirePhone && (
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                      Telefone Requerido
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(formatPhone(e.target.value))}
+                        placeholder="(00) 99999-9999"
+                        className="w-full bg-[#0F1115] border border-white/10 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 text-base md:text-sm text-slate-200 outline-none transition-all placeholder:text-slate-700 font-mono"
+                      />
+                      <div className="absolute right-3.5 top-3.5 text-slate-600">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="submit"
@@ -272,22 +388,62 @@ export default function ParticipantPanel({
                           {me.name}
                         </h4>
                         <p className="text-[10px] text-slate-500 mt-0.5">Participante</p>
+                        
+                        {(me.phone || me.cpf) && (
+                          <div className="flex flex-col items-center mt-2.5 space-y-0.5 text-[9px] text-slate-400 font-mono bg-[#0F1115]/60 px-3 py-1.5 rounded-xl border border-white/5">
+                            {me.phone && <span>📞 {me.phone}</span>}
+                            {me.cpf && <span>🪪 CPF: {me.cpf}</span>}
+                          </div>
+                        )}
                       </div>
 
                       {/* Dotted cutting separator line */}
                       <div className="border-t-2 border-dashed border-white/5 my-2 mx-6" />
 
                       {/* Stub code details */}
-                      <div className="p-6 pt-4 text-center flex flex-col items-center">
-                        <span className="text-[9px] font-bold tracking-widest text-[#94A3B8] uppercase mb-1">
-                          NÚMERO DO SORTEIO
+                      <div className="p-6 pt-4 text-center flex flex-col items-center font-sans">
+                        <span className="text-[9px] font-bold tracking-widest text-[#94A3B8] uppercase mb-2">
+                          {myTickets.length > 1 ? "SEUS NÚMEROS DE BILHETE" : "NÚMERO DO SORTEIO"}
                         </span>
-                        <div className="font-display font-black text-white text-5xl md:text-6xl tracking-tight select-none pb-2 neon-glow">
-                          #{me.ticketNumber}
+                        
+                        <div className="flex flex-wrap items-center justify-center gap-2 max-w-full px-2 py-1 select-none">
+                          {myTickets.map((t) => (
+                            <span 
+                              key={t.id} 
+                              className="font-display font-black text-white text-3xl md:text-4xl tracking-tight neon-glow bg-blue-500/10 border border-blue-500/30 px-3.5 py-1.5 rounded-2xl relative shadow-md"
+                              title="Seu Número do Sorteio"
+                            >
+                              #{t.ticketNumber}
+                            </span>
+                          ))}
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-2 max-w-[200px]">
-                          Guarde este número. Ele será exibido na tela central se seu bilhete for sorteado!
+
+                        <p className="text-[10px] text-slate-400 mt-3 max-w-[200px] leading-relaxed">
+                          {myTickets.length > 1
+                            ? "Guarde estes números. Se algum deles for sorteado, você será o grande vencedor!"
+                            : "Guarde este número. Ele será exibido na tela central se seu bilhete for sorteado!"}
                         </p>
+
+                        {/* Botão de gerar outro bilhete integrado, se permitido */}
+                        {room.allowMultipleTickets === true && (
+                          <div className="mt-4 pt-4 border-t border-white/5 w-full flex justify-center">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  setErrorMsg("");
+                                  const suffix = "_" + Date.now();
+                                  // Reutiliza name, cpf, e phone já cadastrados no primeiro bilhete para obter os subsequentes sem redigitar
+                                  await onJoin(me.name, me.phone, me.cpf, suffix);
+                                } catch (err: any) {
+                                  setErrorMsg(err.message || "Não foi possível gerar outro bilhete.");
+                                }
+                              }}
+                              className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 border border-indigo-500/30 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-md shadow-indigo-950/20 cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              <Ticket className="w-3.5 h-3.5 text-indigo-300" /> Obter Outro Bilhete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : null}
@@ -398,9 +554,9 @@ export default function ParticipantPanel({
           Criado em 2026 por Alison Fernando Rodrigues dos Santos - VouGanhei!
         </p>
         <div className="flex items-center justify-center gap-3 mt-1.5 text-[9px] text-slate-600 font-mono">
-          <span>Versão: 0.15 (Beta)</span>
+          <span>Versão: 0.16 (Beta)</span>
           <span>•</span>
-          <span>Build: 2026-05-21</span>
+          <span>Build: 2026-05-25</span>
           <span>•</span>
           <div className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
